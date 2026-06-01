@@ -15,6 +15,9 @@ const HORSE_TEMPLATES = [
   { name: "หมูตัน", color: "#7cff2d" },
   { name: "จอมซิ่ง", color: "#ff6b35" },
   { name: "มังกรดำ", color: "#b44dff" },
+  { name: "สิงห์สนามซ้อม", color: "#00ff99" },
+  { name: "เต่าบินเกียร์ห้า", color: "#ffea00" },
+  { name: "สายฟ้าหน้ามึน", color: "#ff3333" },
 ];
 
 /**
@@ -221,7 +224,7 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         },
       });
 
-      // Determine who bet wrong (losers who need to drink)
+      // Fetch all bets for this race
       const allBets = await prisma.bet.findMany({
         where: { raceId },
         include: {
@@ -230,8 +233,16 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         },
       });
 
-      const winners = allBets.filter((b) => b.horseId === result.winner.id);
-      const losers = allBets.filter((b) => b.horseId !== result.winner.id);
+      // Determine rankings map for quick lookup
+      const rankingMap = {};
+      result.rankings.forEach((r) => {
+        rankingMap[r.id] = r.rank;
+      });
+
+      // Winners (Safe): bet on horse that finished 1st, 2nd, or 3rd
+      const winners = allBets.filter((b) => rankingMap[b.horseId] <= 3);
+      // Losers (Must drink): bet on horse that finished 4th or lower (ranks 4-8)
+      const losers = allBets.filter((b) => rankingMap[b.horseId] > 3);
 
       // Increment drink count for losers
       for (const loser of losers) {
@@ -253,11 +264,10 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         });
       }
 
-      // Add points to user scores based on rankings
-      // 1st: 5 pts, 2nd: 4 pts, 3rd: 3 pts, 4th: 2 pts, 5th: 1 pt
+      // Add points to user scores based on rankings (1st: 8 pts, 2nd: 7 pts, ... 8th: 1 pt)
       for (const bet of allBets) {
-        const horseRank = result.rankings.find((r) => r.id === bet.horseId)?.rank || 5;
-        const pointsToAdd = Math.max(1, 6 - horseRank);
+        const horseRank = rankingMap[bet.horseId] || 8;
+        const pointsToAdd = Math.max(1, 9 - horseRank);
 
         if (pointsToAdd > 0) {
           await prisma.roomPlayer.update({
@@ -304,6 +314,12 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
           username: b.user.username,
           avatar: b.user.avatar,
           betOn: { name: b.horse.name, color: b.horse.color },
+        })),
+        bets: allBets.map((b) => ({
+          userId: b.user.id,
+          username: b.user.username,
+          avatar: b.user.avatar,
+          horseId: b.horseId,
         })),
       });
 

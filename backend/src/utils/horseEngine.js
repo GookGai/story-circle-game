@@ -8,7 +8,7 @@
  * Target duration: ~50-80 ticks (5-8 seconds at 100ms per tick)
  */
 
-const TRACK_DISTANCE = 1000;
+const TRACK_DISTANCE = 2500;
 const BURST_MULTIPLIER = 1.5;
 const STUMBLE_MULTIPLIER = 0.3;
 const BURST_DURATION = 3; // ticks
@@ -37,19 +37,31 @@ export function simulateRace(horses) {
   let tick = 0;
   let winner = null;
 
-  while (!winner) {
+  while (state.some((h) => h.distance < TRACK_DISTANCE)) {
     tick++;
     const frameData = [];
 
     for (const horse of state) {
+      // Ability: "มังกรดำ" (Mystic Luck) - event check chance is increased slightly
+      const eventChance = horse.name === "มังกรดำ" ? 0.05 : EVENT_CHANCE;
+
       // Check for random events
-      if (!horse.activeEffect && Math.random() < EVENT_CHANCE) {
+      if (!horse.activeEffect && Math.random() < eventChance) {
         // Luck affects which event you get — higher luck = more bursts
         const isBurst = Math.random() * 100 < horse.luck;
-        horse.activeEffect = {
-          type: isBurst ? "burst" : "stumble",
-          ticksRemaining: isBurst ? BURST_DURATION : STUMBLE_DURATION,
-        };
+        const type = isBurst ? "burst" : "stumble";
+        
+        // Ability: "เจ้าฟ้า" (Pure Focus) - immune to stumbling
+        if (type === "stumble" && horse.name === "เจ้าฟ้า") {
+          // Ignore stumbling
+        } else {
+          // Ability: "หมูตัน" (Stout & Steady) - stumbling lasts only 1 tick instead of 2
+          const duration = (type === "stumble" && horse.name === "หมูตัน") ? 1 : (isBurst ? BURST_DURATION : STUMBLE_DURATION);
+          horse.activeEffect = {
+            type,
+            ticksRemaining: duration,
+          };
+        }
       }
 
       // Calculate speed multiplier from active effects
@@ -58,9 +70,11 @@ export function simulateRace(horses) {
 
       if (horse.activeEffect) {
         eventType = horse.activeEffect.type;
+        // Ability: "พญาลม" (Wind Master) - stronger burst speed multiplier (1.56 instead of 1.5)
+        const burstMult = horse.name === "พญาลม" ? 1.56 : BURST_MULTIPLIER;
         effectMultiplier =
           horse.activeEffect.type === "burst"
-            ? BURST_MULTIPLIER
+            ? burstMult
             : STUMBLE_MULTIPLIER;
 
         horse.activeEffect.ticksRemaining--;
@@ -70,14 +84,42 @@ export function simulateRace(horses) {
       }
 
       // Core movement formula:
-      // distance += (speed/100) * (stamina/100 * 0.5 + 0.5) * (0.7 + random * 0.6 * luck/100)
       const baseSpeed = horse.speed / 100;
       const staminaFactor = (horse.stamina / 100) * 0.5 + 0.5;
-      const luckFactor = 0.7 + Math.random() * 0.6 * (horse.luck / 100);
-      const movement = baseSpeed * staminaFactor * luckFactor * effectMultiplier;
+      
+      // Ability: "สายฟ้าหน้ามึน" (Dazed Lightning) - wider luck variance
+      let luckFactor;
+      if (horse.name === "สายฟ้าหน้ามึน") {
+        luckFactor = (0.7 - 0.20 * (horse.luck / 100)) + Math.random() * 1.0 * (horse.luck / 100);
+      } else {
+        luckFactor = 0.7 + Math.random() * 0.6 * (horse.luck / 100);
+      }
+      
+      let movement = baseSpeed * staminaFactor * luckFactor * effectMultiplier;
+
+      // Ability: "จอมซิ่ง" (Endgame Nitro) - +10% speed in final stretch (>2150m)
+      if (horse.name === "จอมซิ่ง" && horse.distance > 2150) {
+        movement *= 1.10;
+      }
+      
+      // Ability: "สิงห์สนามซ้อม" (Early Booster) - +12% speed in first 15 ticks
+      if (horse.name === "สิงห์สนามซ้อม" && tick <= 15) {
+        movement *= 1.12;
+      }
+
+      // Ability: "เต่าบินเกียร์ห้า" (Comeback King) - +10% speed when in last place
+      if (horse.name === "เต่าบินเกียร์ห้า") {
+        const minDistance = Math.min(...state.map((h) => h.distance));
+        if (horse.distance <= minDistance) {
+          movement *= 1.10;
+        }
+      }
 
       // Scale movement to hit target tick range (multiply by ~18 to get 50-80 ticks)
-      horse.distance += movement * 18;
+      // Only move if not already finished
+      if (horse.distance < TRACK_DISTANCE) {
+        horse.distance += movement * 18;
+      }
 
       // Clamp to track distance
       if (horse.distance >= TRACK_DISTANCE) {
@@ -99,22 +141,23 @@ export function simulateRace(horses) {
       horses: frameData,
     });
 
-    // Check for winner(s) — first horse to reach TRACK_DISTANCE
-    const finishers = state.filter((h) => h.distance >= TRACK_DISTANCE);
-    if (finishers.length > 0) {
-      // If multiple finish on same tick, the one with highest distance wins
-      // (though they're all at 1000, pick the first one processed — or use original stats as tiebreaker)
-      winner = finishers.reduce((best, h) =>
-        h.speed + h.luck > best.speed + best.luck ? h : best
-      );
+    // Check for winner (the first horse to cross TRACK_DISTANCE)
+    if (!winner) {
+      const finishers = state.filter((h) => h.distance >= TRACK_DISTANCE);
+      if (finishers.length > 0) {
+        winner = finishers.reduce((best, h) =>
+          h.speed + h.luck > best.speed + best.luck ? h : best
+        );
+      }
     }
 
-    // Safety valve: prevent infinite loops (max 150 ticks)
-    if (tick >= 150) {
-      // Pick the horse that's furthest ahead
-      winner = state.reduce((best, h) =>
-        h.distance > best.distance ? h : best
-      );
+    // Safety valve: prevent infinite loops (max 450 ticks)
+    if (tick >= 450) {
+      if (!winner) {
+        winner = state.reduce((best, h) =>
+          h.distance > best.distance ? h : best
+        );
+      }
       break;
     }
   }

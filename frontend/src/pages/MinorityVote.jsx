@@ -41,6 +41,9 @@ export default function MinorityVote() {
   const [drinkCount, setDrinkCount] = useState(0);
   const [showResult, setShowResult] = useState(false);
   
+  const [countdown, setCountdown] = useState(null);
+  const [pendingResults, setPendingResults] = useState(null);
+  
   const [isSetter, setIsSetter] = useState(false);
   const [setterInfo, setSetterInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +95,42 @@ export default function MinorityVote() {
     return () => clearInterval(interval);
   }, [phase, timer, isHost, roundId, socket]);
 
+  // Countdown timer logic
+  useEffect(() => {
+    if (countdown === null) return;
+    
+    if (countdown > 0) {
+      const timeoutId = setTimeout(() => {
+        setCountdown(c => c - 1);
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setCountdown(null);
+      if (pendingResults) {
+        const data = pendingResults;
+        setPhase(PHASES.REVEAL);
+        setResults({
+          percentA: data.countA + data.countB > 0 ? Math.round((data.countA / (data.countA + data.countB)) * 100) : 0,
+          percentB: data.countA + data.countB > 0 ? Math.round((data.countB / (data.countA + data.countB)) * 100) : 0,
+          countA: data.countA,
+          countB: data.countB,
+          votesA: data.votesA || [],
+          votesB: data.votesB || [],
+          isTie: data.isTie,
+        });
+        setLosers(data.drinkers || []);
+        
+        // Update drink count if I am in the losers
+        const myLoss = (data.drinkers || []).find(l => l.userId === user?.id);
+        if (myLoss) {
+          setDrinkCount(prev => prev + 1);
+        }
+        
+        setShowResult(true);
+      }
+    }
+  }, [countdown, pendingResults, user]);
+
   // Socket Events
   useSocketEvent(
     'vote:nextSetter',
@@ -108,6 +147,8 @@ export default function MinorityVote() {
       setOptionA('');
       setOptionB('');
       setVoteCount(prev => ({ ...prev, current: 0 }));
+      setCountdown(null);
+      setPendingResults(null);
     }, [user])
   );
 
@@ -125,6 +166,8 @@ export default function MinorityVote() {
       setSelectedVote(null);
       setVoted(false);
       setVoteCount(prev => ({ ...prev, current: 0 }));
+      setCountdown(null);
+      setPendingResults(null);
     }, [])
   );
 
@@ -138,24 +181,10 @@ export default function MinorityVote() {
   useSocketEvent(
     'vote:revealed',
     useCallback((data) => {
-      setPhase(PHASES.REVEAL);
-      setResults({
-        percentA: data.countA + data.countB > 0 ? Math.round((data.countA / (data.countA + data.countB)) * 100) : 0,
-        percentB: data.countA + data.countB > 0 ? Math.round((data.countB / (data.countA + data.countB)) * 100) : 0,
-        countA: data.countA,
-        countB: data.countB,
-        isTie: data.isTie,
-      });
-      setLosers(data.drinkers || []);
-      
-      // Update drink count if I am in the losers
-      const myLoss = (data.drinkers || []).find(l => l.userId === user?.id);
-      if (myLoss) {
-        setDrinkCount(prev => prev + 1);
-      }
-      
-      setShowResult(true);
-    }, [user])
+      // Store pending results and initiate countdown
+      setPendingResults(data);
+      setCountdown(3);
+    }, [])
   );
 
   function handleSubmitQuestion() {
@@ -259,8 +288,30 @@ export default function MinorityVote() {
         </div>
       )}
 
+      {/* Countdown Screen */}
+      {countdown !== null && (
+        <div className="flex flex-col items-center justify-center py-xl animate-fade-in" style={{ minHeight: '350px' }}>
+          <p className="text-secondary-color text-lg mb-md animate-pulse font-semibold">🎲 นับถอยหลังเปิดเผยผลโหวต...</p>
+          <div 
+            className="flex items-center justify-center font-bold animate-bounce-in" 
+            style={{ 
+              fontSize: '6rem', 
+              width: '150px', 
+              height: '150px', 
+              borderRadius: '50%', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '4px solid var(--neon-cyan)', 
+              boxShadow: '0 0 30px rgba(0, 212, 255, 0.3)', 
+              color: 'var(--neon-cyan)'
+            }}
+          >
+            {countdown === 0 ? '🔥' : countdown}
+          </div>
+        </div>
+      )}
+
       {/* Voting Phase */}
-      {phase === PHASES.VOTING && currentQuestion && (
+      {countdown === null && phase === PHASES.VOTING && currentQuestion && (
         <div className="animate-slide-up">
           <div className="text-center mb-lg">
             <Timer seconds={timer} total={20} />
@@ -304,7 +355,7 @@ export default function MinorityVote() {
       )}
 
       {/* Reveal Phase */}
-      {phase === PHASES.REVEAL && results && !showResult && (
+      {countdown === null && phase === PHASES.REVEAL && results && !showResult && (
         <div className="animate-slide-up">
           <h2 className="text-xl font-bold text-center mb-lg">📊 ผลโหวต</h2>
 
@@ -313,21 +364,168 @@ export default function MinorityVote() {
               {currentQuestion?.question}
             </p>
 
+            {/* Clear Winner (Minority) Announcement */}
+            <div className="text-center mb-lg p-md rounded-xl animate-bounce-in" style={{ 
+              background: results.isTie ? 'rgba(255, 45, 120, 0.05)' : 'rgba(124, 255, 45, 0.05)',
+              border: results.isTie ? '1px solid rgba(255, 45, 120, 0.2)' : '1px solid rgba(124, 255, 45, 0.2)',
+            }}>
+              {results.isTie ? (
+                <div>
+                  <h3 className="text-lg font-bold text-gradient">⚖️ ผลลัพธ์: เสมอ!</h3>
+                  <p className="text-sm text-secondary-color mt-xs">เจ๊ากันไป ไม่มีใครเป็นเสียงส่วนน้อย ทุกคนต้องดื่ม! 🍻</p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--neon-green)', textShadow: '0 0 15px rgba(124, 255, 45, 0.4)' }}>
+                    🏆 ตัวเลือกข้างน้อยที่ชนะ: {results.countA < results.countB ? currentQuestion?.optionA : currentQuestion?.optionB}
+                  </h3>
+                  <p className="text-sm text-secondary-color mt-xs">
+                    ฝ่ายเสียงส่วนน้อยชนะกติกาเกมนี้ไป! คนที่ตอบตัวเลือกนี้จะต้องดื่ม! 🍻
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Styled Vote Bars */}
             <div className="vote-reveal">
-              <div className="vote-bar mb-md">
+              <div 
+                className="vote-bar mb-md" 
+                style={{ 
+                  height: '42px', 
+                  borderRadius: '21px',
+                  border: results.isTie ? '1px solid rgba(255, 45, 120, 0.3)' : (results.countA < results.countB ? '2px solid var(--neon-green)' : '1px solid var(--glass-border)'),
+                  boxShadow: (!results.isTie && results.countA < results.countB) ? '0 0 15px rgba(124, 255, 45, 0.15)' : 'none',
+                  background: 'rgba(255,255,255,0.02)',
+                  overflow: 'hidden'
+                }}
+              >
                 <div
-                  className="vote-bar-fill a"
-                  style={{ width: `${results.percentA || 0}%` }}
+                  className="vote-bar-fill a animate-slide-up"
+                  style={{ 
+                    width: `${results.percentA || 0}%`, 
+                    height: '100%', 
+                    borderRadius: '21px',
+                    background: results.isTie ? 'var(--gradient-danger)' : (results.countA < results.countB ? 'var(--gradient-success)' : 'rgba(255,255,255,0.08)'),
+                    color: (results.countA < results.countB && !results.isTie) ? '#0a0015' : 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 15px'
+                  }}
                 >
-                  A: {results.countA} ({results.percentA}%)
+                  <span className="font-bold">A: {currentQuestion?.optionA}</span>
+                  <span className="font-bold">{results.countA} โหวต ({results.percentA}%)</span>
                 </div>
               </div>
-              <div className="vote-bar">
+              
+              <div 
+                className="vote-bar" 
+                style={{ 
+                  height: '42px', 
+                  borderRadius: '21px',
+                  border: results.isTie ? '1px solid rgba(255, 45, 120, 0.3)' : (results.countB < results.countA ? '2px solid var(--neon-green)' : '1px solid var(--glass-border)'),
+                  boxShadow: (!results.isTie && results.countB < results.countA) ? '0 0 15px rgba(124, 255, 45, 0.15)' : 'none',
+                  background: 'rgba(255,255,255,0.02)',
+                  overflow: 'hidden'
+                }}
+              >
                 <div
-                  className="vote-bar-fill b"
-                  style={{ width: `${results.percentB || 0}%` }}
+                  className="vote-bar-fill b animate-slide-up"
+                  style={{ 
+                    width: `${results.percentB || 0}%`, 
+                    height: '100%', 
+                    borderRadius: '21px',
+                    background: results.isTie ? 'var(--gradient-danger)' : (results.countB < results.countA ? 'var(--gradient-success)' : 'rgba(255,255,255,0.08)'),
+                    color: (results.countB < results.countA && !results.isTie) ? '#0a0015' : 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 15px'
+                  }}
                 >
-                  B: {results.countB} ({results.percentB}%)
+                  <span className="font-bold">B: {currentQuestion?.optionB}</span>
+                  <span className="font-bold">{results.countB} โหวต ({results.percentB}%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Voter Breakdown & Drinkers List */}
+          <div className="flex flex-col gap-md mb-lg">
+            <h3 className="text-md font-bold mb-xs flex items-center gap-xs">
+              📊 รายชื่อจำแนกการโหวต
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+              {/* Voters Option A */}
+              <div className="glass-card no-hover compact" style={{ borderColor: results.isTie ? 'rgba(255, 45, 120, 0.3)' : (results.countA < results.countB ? 'rgba(124, 255, 45, 0.4)' : 'rgba(255,255,255,0.05)'), background: 'rgba(255,255,255,0.01)' }}>
+                <div className="flex items-center justify-between mb-sm border-b pb-xs" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                  <h4 className="font-bold text-sm" style={{ color: results.isTie ? 'white' : (results.countA < results.countB ? 'var(--neon-pink)' : 'var(--neon-green)') }}>
+                    🗳️ ฝ่าย A ({currentQuestion?.optionA})
+                  </h4>
+                  <span 
+                    style={{ 
+                      padding: '2px 8px', 
+                      fontSize: '0.7rem', 
+                      borderRadius: '8px', 
+                      fontWeight: 'bold', 
+                      background: results.isTie ? 'var(--gradient-danger)' : (results.countA < results.countB ? 'var(--gradient-danger)' : 'var(--gradient-success)'),
+                      color: (results.countA >= results.countB && !results.isTie) ? '#0a0015' : 'white',
+                      boxShadow: (results.countA >= results.countB && !results.isTie) ? '0 0 10px rgba(124, 255, 45, 0.15)' : '0 0 10px rgba(255, 59, 59, 0.15)'
+                    }}
+                  >
+                    {results.isTie ? 'ต้องดื่ม 🍻' : (results.countA < results.countB ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-xs">
+                  {results.votesA?.length === 0 ? (
+                    <span className="text-xs text-muted-color py-xs">ไม่มีผู้โหวตตัวเลือกนี้</span>
+                  ) : (
+                    results.votesA.map((v) => (
+                      <div key={v.userId} className="flex items-center gap-xs p-xs rounded-lg text-xs" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <div className="avatar-circle sm" style={{ width: '22px', height: '22px', fontSize: '0.8rem', borderWidth: '1px' }}>
+                          {getAvatarEmoji(v.avatar)}
+                        </div>
+                        <span className="font-medium">{v.username}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Voters Option B */}
+              <div className="glass-card no-hover compact" style={{ borderColor: results.isTie ? 'rgba(255, 45, 120, 0.3)' : (results.countB < results.countA ? 'rgba(124, 255, 45, 0.4)' : 'rgba(255,255,255,0.05)'), background: 'rgba(255,255,255,0.01)' }}>
+                <div className="flex items-center justify-between mb-sm border-b pb-xs" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                  <h4 className="font-bold text-sm" style={{ color: results.isTie ? 'white' : (results.countB < results.countA ? 'var(--neon-pink)' : 'var(--neon-green)') }}>
+                    🗳️ ฝ่าย B ({currentQuestion?.optionB})
+                  </h4>
+                  <span 
+                    style={{ 
+                      padding: '2px 8px', 
+                      fontSize: '0.7rem', 
+                      borderRadius: '8px', 
+                      fontWeight: 'bold', 
+                      background: results.isTie ? 'var(--gradient-danger)' : (results.countB < results.countA ? 'var(--gradient-danger)' : 'var(--gradient-success)'),
+                      color: (results.countB >= results.countA && !results.isTie) ? '#0a0015' : 'white',
+                      boxShadow: (results.countB >= results.countA && !results.isTie) ? '0 0 10px rgba(124, 255, 45, 0.15)' : '0 0 10px rgba(255, 59, 59, 0.15)'
+                    }}
+                  >
+                    {results.isTie ? 'ต้องดื่ม 🍻' : (results.countB < results.countA ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-xs">
+                  {results.votesB?.length === 0 ? (
+                    <span className="text-xs text-muted-color py-xs">ไม่มีผู้โหวตตัวเลือกนี้</span>
+                  ) : (
+                    results.votesB.map((v) => (
+                      <div key={v.userId} className="flex items-center gap-xs p-xs rounded-lg text-xs" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <div className="avatar-circle sm" style={{ width: '22px', height: '22px', fontSize: '0.8rem', borderWidth: '1px' }}>
+                          {getAvatarEmoji(v.avatar)}
+                        </div>
+                        <span className="font-medium">{v.username}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

@@ -1,0 +1,382 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useSocket, useSocketEvent } from '../hooks/useSocket';
+import HorseCard from '../components/HorseCard';
+import Timer from '../components/Timer';
+import DrinkCounter from '../components/DrinkCounter';
+import GameResult from '../components/GameResult';
+import { api } from '../utils/api';
+import { getAvatarEmoji } from '../utils/avatars';
+
+const HORSE_EMOJIS = ['🐎', '🦄', '🏇', '🐴', '🎠'];
+
+const PHASES = {
+  BETTING: 'betting',
+  RACING: 'racing',
+  RESULT: 'result',
+};
+
+export default function HorseRace() {
+  const { code } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { socket } = useSocket();
+
+  const [phase, setPhase] = useState(PHASES.BETTING);
+  const [raceId, setRaceId] = useState(null);
+  const [horses, setHorses] = useState([]);
+  const [selectedHorseId, setSelectedHorseId] = useState(null);
+  const [bets, setBets] = useState({}); // { horseId: count }
+  const [positions, setPositions] = useState({}); // { horseId: percentage }
+  const [timer, setTimer] = useState(30);
+  const [isHost, setIsHost] = useState(false);
+  const [winner, setWinner] = useState(null);
+  const [losers, setLosers] = useState([]);
+  const [drinkCount, setDrinkCount] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [racing, setRacing] = useState(false);
+  const [rankings, setRankings] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+
+  // Initialize room and check host
+  useEffect(() => {
+    async function init() {
+      try {
+        const data = await api.get(`/api/rooms/${code}`);
+        setIsHost(data.room.hostId === user?.id);
+        
+        // Fetch current drink count
+        const stats = await api.get(`/api/stats/room/${data.room.id}`);
+        const myStat = stats.leaderboard.find(s => s.userId === user?.id);
+        if (myStat) setDrinkCount(myStat.count);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    init();
+  }, [code, user]);
+
+  // Socket: join room channel and create race if host
+  useEffect(() => {
+    if (!socket || !code) return;
+    
+    // Make sure we are in the room channel
+    socket.emit('room:join', code, () => {
+      // If host and no race yet, start one automatically
+      if (isHost && !raceId) {
+        socket.emit('horse:newRace', code);
+      }
+    });
+
+    // We can also poll for the room's current active race if we join late,
+    // but for now relying on host to start it or events.
+  }, [socket, code, isHost, raceId]);
+
+  // Timer countdown
+  useEffect(() => {
+    let interval;
+    if (phase === PHASES.BETTING && timer > 0) {
+      interval = setInterval(() => setTimer(t => t - 1), 1000);
+    } else if (timer === 0 && isHost && phase === PHASES.BETTING) {
+      // Auto close betting if timer runs out
+      handleStartRace();
+    }
+    return () => clearInterval(interval);
+  }, [phase, timer, isHost]);
+
+  // Socket events
+  useSocketEvent(
+    'horse:raceCreated',
+    useCallback((data) => {
+      setRaceId(data.race.id);
+      setHorses(data.horses);
+      setPhase(PHASES.BETTING);
+      setSelectedHorseId(null);
+      setBets({});
+      setPositions({});
+      setWinner(null);
+      setLosers([]);
+      setRankings([]);
+      setLeaderboard([]);
+      setShowResult(false);
+      setTimer(30);
+    }, [])
+  );
+
+  useSocketEvent(
+    'horse:betUpdate',
+    useCallback((data) => {
+      const newBets = {};
+      data.betCounts.forEach(b => {
+        newBets[b.horseId] = b.count;
+      });
+      setBets(newBets);
+    }, [])
+  );
+
+  useSocketEvent(
+    'horse:raceStarting',
+    useCallback(() => {
+      setPhase(PHASES.RACING);
+      setRacing(true);
+    }, [])
+  );
+
+  useSocketEvent(
+    'horse:frame',
+    useCallback((data) => {
+      const newPositions = {};
+      // server distance is out of 1000
+      data.frame.horses.forEach(h => {
+        newPositions[h.horseId] = (h.distance / 1000) * 100;
+      });
+      setPositions(newPositions);
+      setRacing(!data.isLast);
+    }, [])
+  );
+
+  useSocketEvent(
+    'horse:result',
+    useCallback((data) => {
+      setPhase(PHASES.RESULT);
+      setWinner(data.winner);
+      setLosers(data.loserBettors || []);
+      setRankings(data.rankings || []);
+      setLeaderboard(data.leaderboard || []);
+      setRacing(false);
+      
+      // Update drink count if I am in the losers
+      const myLoss = data.loserBettors.find(l => l.userId === user?.id);
+      if (myLoss) {
+        setDrinkCount(prev => prev + 1);
+      }
+      
+      setShowResult(true);
+    }, [user])
+  );
+
+  function handleBet(horseId) {
+    if (phase !== PHASES.BETTING) return;
+    setSelectedHorseId(horseId);
+    if (socket && raceId) {
+      socket.emit('horse:bet', { raceId, horseId });
+    }
+  }
+
+  function handleStartRace() {
+    if (socket && raceId) {
+      socket.emit('horse:startRace', raceId);
+    }
+  }
+
+  function handlePlayAgain() {
+    if (socket) {
+      socket.emit('horse:newRace', code);
+    }
+  }
+
+  function handleBackToRoom() {
+    navigate(`/room/${code}`);
+  }
+
+  return (
+    <div className="page-container">
+      <div className="flex justify-between items-center mb-lg animate-slide-up">
+        <h1 className="page-title mb-0">🏇 แข่งม้า</h1>
+        <DrinkCounter count={drinkCount} />
+      </div>
+
+      {/* Betting Phase */}
+      {phase === PHASES.BETTING && (
+        <div className="animate-slide-up">
+          <div className="text-center mb-lg">
+            <Timer seconds={timer} total={30} />
+            <p className="text-secondary-color mt-sm">เลือกม้าที่จะแทง!</p>
+          </div>
+
+          {!horses.length && (
+            <div className="text-center py-xl">
+              <div className="spinner lg mx-auto mb-md" />
+              <p>กำลังเตรียมสนามแข่ง...</p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-md">
+            {horses.map((horse, i) => (
+              <HorseCard
+                key={horse.id}
+                index={i}
+                emoji={HORSE_EMOJIS[i % HORSE_EMOJIS.length]}
+                name={horse.name}
+                stats={{ speed: horse.speed, stamina: horse.stamina, luck: horse.luck }}
+                selected={selectedHorseId === horse.id}
+                betCount={bets[horse.id] || 0}
+                onClick={() => handleBet(horse.id)}
+              />
+            ))}
+          </div>
+
+          {isHost && horses.length > 0 && (
+            <button
+              className="btn btn-danger btn-block mt-xl"
+              onClick={handleStartRace}
+            >
+              🏁 เริ่มแข่งเลย
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Racing Phase */}
+      {phase === PHASES.RACING && (
+        <div className="animate-slide-up">
+          <div className="text-center mb-lg">
+            <h2 className="text-xl font-bold animate-pulse">
+              🏁 แข่งอยู่!
+            </h2>
+          </div>
+
+          <div className="race-track">
+            {horses.map((horse, i) => {
+              const pos = positions[horse.id] || 0;
+              return (
+                <div key={horse.id} className="horse-lane">
+                  <div className="horse-lane-bg" />
+                  <span className="horse-lane-number">{i + 1}</span>
+                  <div className="horse-progress">
+                    <div
+                      className={`horse-trail lane-${i}`}
+                      style={{ width: `${pos}%` }}
+                    />
+                    <span
+                      className={`horse ${racing ? 'galloping' : ''}`}
+                      style={{ left: `calc(${pos}% - 12px)` }}
+                    >
+                      {HORSE_EMOJIS[i % HORSE_EMOJIS.length]}
+                    </span>
+                  </div>
+                  <div className="finish-line" />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-sm justify-center mt-lg">
+            {horses.map((horse, i) => (
+              <span
+                key={horse.id}
+                className="badge outline"
+                style={{
+                  borderColor:
+                    selectedHorseId === horse.id ? 'var(--neon-cyan)' : undefined,
+                }}
+              >
+                {HORSE_EMOJIS[i % HORSE_EMOJIS.length]} {horse.name}
+                {selectedHorseId === horse.id && ' ⭐'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Result Phase */}
+      {phase === PHASES.RESULT && !showResult && (
+        <div className="text-center animate-slide-up">
+          <h2 className="text-xl font-bold mb-lg">🏆 ผลการแข่ง</h2>
+          {winner && (
+            <div className="glass-card no-hover mb-lg text-center">
+              <div style={{ fontSize: '4rem' }}>{HORSE_EMOJIS[horses.findIndex(h => h.id === winner.id) % HORSE_EMOJIS.length]}</div>
+              <p className="text-lg font-bold text-gradient mt-sm">
+                {winner.name} ชนะ!
+              </p>
+            </div>
+          )}
+
+          {/* Horse Finishing Placements */}
+          {rankings.length > 0 && (
+            <div className="glass-card no-hover mb-lg" style={{ textAlign: 'left' }}>
+              <h3 className="text-md font-bold mb-md flex items-center gap-xs">
+                🏁 ลำดับการเข้าเส้นชัย
+              </h3>
+              <div className="flex flex-col gap-sm">
+                {rankings.map((h, i) => {
+                  const placeEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+                  const isWinner = i === 0;
+                  return (
+                    <div key={h.id} className="flex items-center justify-between p-sm glass-card compact" style={{ borderColor: isWinner ? 'var(--neon-pink)' : 'var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+                      <div className="flex items-center gap-md">
+                        <span style={{ fontSize: '1.25rem', width: '24px', textAlign: 'center', fontWeight: 'bold' }}>{placeEmoji}</span>
+                        <span style={{ fontSize: '1.75rem' }}>{HORSE_EMOJIS[horses.findIndex(original => original.id === h.id) % HORSE_EMOJIS.length]}</span>
+                        <div>
+                          <div className="font-semibold" style={{ color: h.color }}>{h.name}</div>
+                          <div className="text-xs text-muted-color">ความเร็ว: {h.speed} | สเตมิน่า: {h.stamina}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-secondary-color">
+                        {h.finishTick ? `เข้าเส้นชัยใน ${h.finishTick} วิ` : 'ยังไม่ถึง'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* User Leaderboard */}
+          {leaderboard.length > 0 && (
+            <div className="glass-card no-hover mb-lg" style={{ textAlign: 'left' }}>
+              <h3 className="text-md font-bold mb-md flex items-center gap-xs">
+                🏆 อันดับคะแนนสะสมในห้อง
+              </h3>
+              <div className="flex flex-col gap-xs">
+                {leaderboard.map((player, index) => {
+                  const isTop = index === 0;
+                  return (
+                    <div key={player.userId} className="flex items-center justify-between p-sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div className="flex items-center gap-md">
+                        <span style={{ fontWeight: 'bold', width: '20px', color: isTop ? 'var(--neon-yellow)' : 'var(--text-color)' }}>#{index + 1}</span>
+                        <div className="avatar-circle sm glow-purple">
+                          {getAvatarEmoji(player.avatar)}
+                        </div>
+                        <span className="font-semibold">{player.username}</span>
+                      </div>
+                      <div className="font-bold" style={{ color: 'var(--neon-cyan)' }}>
+                        ⭐ {player.score} แต้ม
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {isHost && (
+            <div className="flex flex-col gap-md">
+              <button className="btn btn-primary btn-block" onClick={handlePlayAgain}>
+                🔄 เล่นอีกรอบ
+              </button>
+              <button className="btn btn-secondary btn-block" onClick={handleBackToRoom}>
+                🚪 กลับห้อง
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Game Result Overlay */}
+      {showResult && (
+        <GameResult
+          emoji="🏆"
+          title={
+            winner
+              ? `${winner.name} ชนะ!`
+              : 'จบการแข่ง!'
+          }
+          losers={losers.map(l => ({ username: l.username, avatar: l.avatar }))}
+          onDismiss={() => setShowResult(false)}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,163 @@
+// Prisma schema for Story Circle
+// Supports: Horse Race, Minority Vote, and extensible game types
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  avatar       String        @default("cat")
+  createdAt    DateTime      @default(now())
+
+  // Relations
+  bets         Bet[]
+  votes        Vote[]
+  roomPlayers  RoomPlayer[]
+  drinkStats   DrinkStat[]
+  createdRooms Room[]        @relation("HostedRooms")
+  setRounds    VoteRound[]   @relation("QuestionSetter")
+}
+
+// ─── Room ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id         String     @id @default(uuid())
+  code       String     @unique @db.VarChar(6)
+  hostId     String
+  gameType   String
+  maxPlayers Int        @default(15)
+  status     RoomStatus @default(WAITING)
+  createdAt  DateTime   @default(now())
+
+  // Relations
+  host       User         @relation("HostedRooms", fields: [hostId], references: [id])
+  players    RoomPlayer[]
+  horseRaces HorseRace[]
+  voteRounds VoteRound[]
+  drinkStats DrinkStat[]
+}
+
+// ─── Room Player (join table) ────────────────────────────────────────────────
+
+model RoomPlayer {
+  id       String   @id @default(uuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  score    Int      @default(0)
+
+  // Relations
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+// ─── Horse Race ──────────────────────────────────────────────────────────────
+
+model HorseRace {
+  id       String @id @default(uuid())
+  roomId   String
+  winnerId Int?
+  status   String @default("BETTING") // BETTING | RACING | FINISHED
+
+  // Relations
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  horses Horse[]
+  bets   Bet[]
+}
+
+// ─── Horse ───────────────────────────────────────────────────────────────────
+
+model Horse {
+  id      Int    @id @default(autoincrement())
+  raceId  String
+  name    String
+  speed   Float
+  stamina Float
+  luck    Float
+  color   String
+
+  // Relations
+  race HorseRace @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  bets Bet[]
+}
+
+// ─── Bet ─────────────────────────────────────────────────────────────────────
+
+model Bet {
+  id      String @id @default(uuid())
+  raceId  String
+  horseId Int
+  userId  String
+
+  // Relations
+  race  HorseRace @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  horse Horse     @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Vote Round ──────────────────────────────────────────────────────────────
+
+model VoteRound {
+  id       String @id @default(uuid())
+  roomId   String
+  question String
+  optionA  String
+  optionB  String
+  status   String @default("VOTING") // VOTING | REVEALED
+  setterId String
+
+  // Relations
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  setter User   @relation("QuestionSetter", fields: [setterId], references: [id], onDelete: Cascade)
+  votes  Vote[]
+}
+
+// ─── Vote ────────────────────────────────────────────────────────────────────
+
+model Vote {
+  id      String @id @default(uuid())
+  roundId String
+  userId  String
+  choice  String // "A" or "B"
+
+  // Relations
+  round VoteRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, userId])
+}
+
+// ─── Drink Stat ──────────────────────────────────────────────────────────────
+
+model DrinkStat {
+  id     String @id @default(uuid())
+  userId String
+  roomId String
+  count  Int    @default(0)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+}

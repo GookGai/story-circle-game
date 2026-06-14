@@ -8,7 +8,7 @@ import PlayerList from '../components/PlayerList';
 
 const GAME_LABELS = {
   'HORSE_RACE': { name: 'แข่งม้า', emoji: '🏇', minPlayers: 2 },
-  'MINORITY_VOTE': { name: 'โหวตข้างน้อย', emoji: '🗳️', minPlayers: 3 },
+  'MINORITY_VOTE': { name: 'โหวตข้างน้อย', emoji: '🗳️', minPlayers: 2 },
 };
 
 export default function Room() {

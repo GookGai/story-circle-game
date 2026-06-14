@@ -145,22 +145,40 @@ async function revealVotes(roundId, io) {
   const countA = votesA.length;
   const countB = votesB.length;
 
+  // Count total players in the room to check for Mind Match condition
+  const totalPlayers = await prisma.roomPlayer.count({
+    where: { roomId: round.roomId }
+  });
+  const isMindMatch = totalPlayers === 2;
+
   // Determine who drinks
   let drinkers = [];
   let drinkReason = "";
 
-  if (countA === countB) {
-    // Tie — everyone drinks!
-    drinkers = round.votes.map((v) => v.user);
-    drinkReason = "เสมอกัน! ทุกคนดื่ม! 🍻";
-  } else if (countA < countB) {
-    // A is minority
-    drinkers = votesA.map((v) => v.user);
-    drinkReason = `ฝ่าย A เป็นเสียงส่วนน้อย (${countA} vs ${countB}) ดื่ม! 🍺`;
+  if (isMindMatch) {
+    if (countA === 2 || countB === 2) {
+      // Both voted the same (Mind Match Win)
+      drinkers = [];
+      drinkReason = "ใจตรงกัน! รอดทั้งคู่! 🎉";
+    } else {
+      // 1 vs 1 (Mind Match Lose)
+      drinkers = round.votes.map((v) => v.user);
+      drinkReason = "ใจไม่ตรงกัน! ดื่มทั้งคู่! 🍻";
+    }
   } else {
-    // B is minority
-    drinkers = votesB.map((v) => v.user);
-    drinkReason = `ฝ่าย B เป็นเสียงส่วนน้อย (${countB} vs ${countA}) ดื่ม! 🍺`;
+    if (countA === countB) {
+      // Tie — everyone drinks!
+      drinkers = round.votes.map((v) => v.user);
+      drinkReason = "เสมอกัน! ทุกคนดื่ม! 🍻";
+    } else if (countA < countB) {
+      // A is minority
+      drinkers = votesA.map((v) => v.user);
+      drinkReason = `ฝ่าย A เป็นเสียงส่วนน้อย (${countA} vs ${countB}) ดื่ม! 🍺`;
+    } else {
+      // B is minority
+      drinkers = votesB.map((v) => v.user);
+      drinkReason = `ฝ่าย B เป็นเสียงส่วนน้อย (${countB} vs ${countA}) ดื่ม! 🍺`;
+    }
   }
 
   // Increment drink count for drinkers
@@ -214,6 +232,7 @@ async function revealVotes(roundId, io) {
     })),
     drinkReason,
     isTie: countA === countB,
+    isMindMatch,
   });
 }
 

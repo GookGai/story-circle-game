@@ -121,6 +121,7 @@ export default function MinorityVote() {
           votesA: data.votesA || [],
           votesB: data.votesB || [],
           isTie: data.isTie,
+          isMindMatch: data.isMindMatch,
         });
         setLosers(data.drinkers || []);
         
@@ -247,7 +248,9 @@ export default function MinorityVote() {
   return (
     <div className="page-container">
       <div className="game-header-bar animate-slide-up">
-        <h1 className="page-title mb-0" style={{ fontSize: '1.4rem' }}>🗳️ โหวตข้างน้อย</h1>
+        <h1 className="page-title mb-0" style={{ fontSize: '1.4rem' }}>
+          {voteCount.total === 2 ? '🧠 เกมรู้ใจ (Mind Match)' : '🗳️ โหวตข้างน้อย'}
+        </h1>
         <DrinkCounter count={drinkCount} />
       </div>
 
@@ -458,25 +461,43 @@ export default function MinorityVote() {
               {currentQuestion?.question}
             </p>
 
-            {/* Clear Winner (Minority) Announcement */}
+            {/* Clear Winner Announcement */}
             <div className="text-center mb-lg p-md rounded-xl animate-bounce-in" style={{ 
               background: results.isTie ? 'rgba(255, 45, 120, 0.05)' : 'rgba(124, 255, 45, 0.05)',
               border: results.isTie ? '1px solid rgba(255, 45, 120, 0.2)' : '1px solid rgba(124, 255, 45, 0.2)',
             }}>
-              {results.isTie ? (
-                <div>
-                  <h3 className="text-lg font-bold text-gradient">⚖️ ผลลัพธ์: เสมอ!</h3>
-                  <p className="text-sm text-secondary-color mt-xs">เจ๊ากันไป ไม่มีใครเป็นเสียงส่วนน้อย ทุกคนต้องดื่ม! 🍻</p>
-                </div>
+              {results.isMindMatch ? (
+                results.isTie ? (
+                  <div>
+                    <h3 className="text-lg font-bold text-gradient">💔 ใจไม่ตรงกัน!</h3>
+                    <p className="text-sm text-secondary-color mt-xs">โหวตคนละทางแบบนี้ ต้องดื่มทั้งคู่! 🍻</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--neon-green)', textShadow: '0 0 15px rgba(124, 255, 45, 0.4)' }}>
+                      🎉 ใจตรงกันสุดๆ! รอดทั้งคู่!
+                    </h3>
+                    <p className="text-sm text-secondary-color mt-xs">
+                      ทั้งสองคนเลือก {results.countA > results.countB ? currentQuestion?.optionA : currentQuestion?.optionB} เหมือนกันเป๊ะ!
+                    </p>
+                  </div>
+                )
               ) : (
-                <div>
-                  <h3 className="text-lg font-bold" style={{ color: 'var(--neon-green)', textShadow: '0 0 15px rgba(124, 255, 45, 0.4)' }}>
-                    🏆 ตัวเลือกข้างน้อยที่ชนะ: {results.countA < results.countB ? currentQuestion?.optionA : currentQuestion?.optionB}
-                  </h3>
-                  <p className="text-sm text-secondary-color mt-xs">
-                    ฝ่ายเสียงส่วนน้อยชนะกติกาเกมนี้ไป! คนที่ตอบตัวเลือกนี้จะต้องดื่ม! 🍻
-                  </p>
-                </div>
+                results.isTie ? (
+                  <div>
+                    <h3 className="text-lg font-bold text-gradient">⚖️ ผลลัพธ์: เสมอ!</h3>
+                    <p className="text-sm text-secondary-color mt-xs">เจ๊ากันไป ไม่มีใครเป็นเสียงส่วนน้อย ทุกคนต้องดื่ม! 🍻</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--neon-green)', textShadow: '0 0 15px rgba(124, 255, 45, 0.4)' }}>
+                      🏆 ตัวเลือกข้างน้อยที่ชนะ: {results.countA < results.countB ? currentQuestion?.optionA : currentQuestion?.optionB}
+                    </h3>
+                    <p className="text-sm text-secondary-color mt-xs">
+                      ฝ่ายเสียงส่วนน้อยชนะกติกาเกมนี้ไป! คนที่ตอบตัวเลือกนี้จะต้องดื่ม! 🍻
+                    </p>
+                  </div>
+                )
               )}
             </div>
 
@@ -579,7 +600,7 @@ export default function MinorityVote() {
                       boxShadow: (results.countA >= results.countB && !results.isTie) ? '0 0 10px rgba(124, 255, 45, 0.15)' : '0 0 10px rgba(255, 59, 59, 0.15)'
                     }}
                   >
-                    {results.isTie ? 'ต้องดื่ม 🍻' : (results.countA < results.countB ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢')}
+                    {results.isMindMatch ? (results.isTie ? '💔 ใจไม่ตรงกัน!' : 'ใจตรงกัน 🟢') : (results.isTie ? 'ต้องดื่ม 🍻' : (results.countA < results.countB ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢'))}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-xs">
@@ -615,7 +636,7 @@ export default function MinorityVote() {
                       boxShadow: (results.countB >= results.countA && !results.isTie) ? '0 0 10px rgba(124, 255, 45, 0.15)' : '0 0 10px rgba(255, 59, 59, 0.15)'
                     }}
                   >
-                    {results.isTie ? 'ต้องดื่ม 🍻' : (results.countB < results.countA ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢')}
+                    {results.isMindMatch ? (results.isTie ? '💔 ใจไม่ตรงกัน!' : 'ใจตรงกัน 🟢') : (results.isTie ? 'ต้องดื่ม 🍻' : (results.countB < results.countA ? 'ต้องดื่ม 🍻' : 'ปลอดภัย 🟢'))}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-xs">
@@ -650,11 +671,11 @@ export default function MinorityVote() {
       {/* Game Result Overlay */}
       {showResult && (
         <GameResult
-          emoji={losers.length === 0 ? '🎉' : '🍺'}
+          emoji={losers.length === 0 ? '🎉' : '🍻'}
           title={
-            results?.isTie
-              ? 'เสมอ! ทุกคนดื่ม! 🍻'
-              : 'ฝ่ายข้างน้อยดื่ม!'
+            results?.isMindMatch 
+              ? (losers.length === 0 ? 'รอดทั้งคู่! 🎉' : 'ดื่มทั้งคู่! 🍻')
+              : (results?.isTie ? 'เสมอ! ทุกคนดื่ม! 🍻' : 'ฝ่ายข้างน้อยดื่ม!')
           }
           losers={losers}
           onDismiss={() => setShowResult(false)}

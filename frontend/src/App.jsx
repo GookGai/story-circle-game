@@ -10,6 +10,7 @@ import HorseRace from './pages/HorseRace';
 import MinorityVote from './pages/MinorityVote';
 import Stats from './pages/Stats';
 import JoinRoom from './pages/JoinRoom';
+import pkg from '../package.json';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -92,6 +93,10 @@ export default function App() {
       </Routes>
 
       {!isLanding && <Navbar />}
+
+      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', pointerEvents: 'none', zIndex: 9999 }}>
+        v{pkg.version}
+      </div>
     </>
   );
 }

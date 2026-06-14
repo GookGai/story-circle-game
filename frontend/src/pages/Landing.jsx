@@ -112,7 +112,7 @@ export default function Landing() {
             marginTop: 32,
           }}
         >
-          v1.0 • Made with 🍺
+          v1.0.3 • Made with 🍺
         </p>
       </div>
     </div>

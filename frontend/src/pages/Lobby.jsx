@@ -8,6 +8,7 @@ import { api } from '../utils/api';
 const GAMES = [
   { id: 'HORSE_RACE', name: 'แข่งม้า', emoji: '🏇', description: 'แทงม้าแล้วลุ้น!' },
   { id: 'MINORITY_VOTE', name: 'โหวตข้างน้อย', emoji: '🗳️', description: 'อย่าเป็นฝ่ายข้างน้อย!' },
+  { id: 'PANIC_JUMP', name: 'ร่มชูชีพวัดใจ', emoji: '🪂', description: 'อย่าช้า! และอย่าโดดคนแรก!' },
 ];
 
 export default function Lobby() {
@@ -17,6 +18,7 @@ export default function Lobby() {
 
   const [selectedGame, setSelectedGame] = useState(GAMES[0].id);
   const [maxPlayers, setMaxPlayers] = useState(8);
+  const [maxRounds, setMaxRounds] = useState(3);
   const [roomCode, setRoomCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -29,6 +31,7 @@ export default function Lobby() {
       const data = await api.post('/api/rooms', {
         gameType: selectedGame,
         maxPlayers,
+        settings: { maxRounds }
       });
       navigate(`/room/${data.room.code}`);
     } catch (err) {
@@ -140,6 +143,28 @@ export default function Lobby() {
             <span>15</span>
           </div>
         </div>
+
+        {/* Max Rounds (Only for PANIC_JUMP) */}
+        {selectedGame === 'PANIC_JUMP' && (
+          <div className="input-group mt-md animate-slide-up">
+            <label className="flex justify-between">
+              <span>จำนวนรอบที่จะเล่น</span>
+              <span className="text-cyan font-bold">{maxRounds} รอบ</span>
+            </label>
+            <input
+              type="range"
+              className="range-slider"
+              min={1}
+              max={10}
+              value={maxRounds}
+              onChange={(e) => setMaxRounds(Number(e.target.value))}
+            />
+            <div className="flex justify-between text-xs text-muted-color">
+              <span>1</span>
+              <span>10</span>
+            </div>
+          </div>
+        )}
 
         <button
           className="btn btn-primary btn-block mt-lg"

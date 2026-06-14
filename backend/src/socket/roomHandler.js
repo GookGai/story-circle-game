@@ -301,7 +301,7 @@ export default function roomHandler(io, socket, connectedUsers) {
   /**
    * room:changeGame — Change game type of the room (host only)
    */
-  socket.on("room:changeGame", async ({ roomId, gameType }, callback) => {
+  socket.on("room:changeGame", async ({ roomId, gameType, settings }, callback) => {
     try {
       const room = await prisma.room.findUnique({ where: { id: roomId } });
       if (!room) {
@@ -312,14 +312,19 @@ export default function roomHandler(io, socket, connectedUsers) {
         return callback?.({ error: "เฉพาะเจ้าของห้องเท่านั้นที่เปลี่ยนเกมได้" });
       }
 
-      // Update room game type
+      const updateData = { gameType };
+      if (settings !== undefined) {
+        updateData.settings = settings;
+      }
+
+      // Update room game type and settings
       await prisma.room.update({
         where: { id: roomId },
-        data: { gameType },
+        data: updateData,
       });
 
       // Broadcast game change to all players in the room
-      io.to(roomId).emit("room:gameChanged", { gameType });
+      io.to(roomId).emit("room:gameChanged", { gameType, settings });
 
       callback?.({ success: true });
     } catch (error) {

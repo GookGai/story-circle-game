@@ -8,6 +8,7 @@ import Lobby from './pages/Lobby';
 import Room from './pages/Room';
 import HorseRace from './pages/HorseRace';
 import MinorityVote from './pages/MinorityVote';
+import PanicJump from './pages/PanicJump';
 import Stats from './pages/Stats';
 import JoinRoom from './pages/JoinRoom';
 import pkg from '../package.json';
@@ -78,6 +79,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MinorityVote />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/game/jump/:code"
+          element={
+            <ProtectedRoute>
+              <PanicJump />
             </ProtectedRoute>
           }
         />

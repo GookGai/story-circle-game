@@ -9,6 +9,7 @@ import PlayerList from '../components/PlayerList';
 const GAME_LABELS = {
   'HORSE_RACE': { name: 'แข่งม้า', emoji: '🏇', minPlayers: 2 },
   'MINORITY_VOTE': { name: 'โหวตข้างน้อย', emoji: '🗳️', minPlayers: 2 },
+  'PANIC_JUMP': { name: 'ร่มชูชีพวัดใจ', emoji: '🪂', minPlayers: 3 },
 };
 
 export default function Room() {
@@ -23,6 +24,7 @@ export default function Room() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [maxRounds, setMaxRounds] = useState(3);
 
   // Fetch room data
   useEffect(() => {
@@ -31,6 +33,9 @@ export default function Room() {
         const data = await api.get(`/api/rooms/${code}`);
         setRoom(data.room);
         setPlayers(data.room.players || []);
+        if (data.room.settings?.maxRounds) {
+          setMaxRounds(data.room.settings.maxRounds);
+        }
       } catch (err) {
         setError(err.message || 'ไม่พบห้อง');
       } finally {
@@ -89,8 +94,11 @@ export default function Room() {
     useCallback((data) => {
       setRoom((prev) => {
         if (!prev) return prev;
-        return { ...prev, gameType: data.gameType };
+        return { ...prev, gameType: data.gameType, settings: data.settings || prev.settings };
       });
+      if (data.settings?.maxRounds) {
+        setMaxRounds(data.settings.maxRounds);
+      }
     }, [])
   );
 
@@ -103,6 +111,8 @@ export default function Room() {
           navigate(`/game/horse/${code}`);
         } else if (gameType === 'MINORITY_VOTE') {
           navigate(`/game/vote/${code}`);
+        } else if (gameType === 'PANIC_JUMP') {
+          navigate(`/game/jump/${code}`);
         }
       },
       [code, navigate]
@@ -130,12 +140,20 @@ export default function Room() {
     navigate('/lobby');
   }
 
-  function handleGameChange(e) {
-    const nextGame = e.target.value;
-    if (socket && room && nextGame) {
-      socket.emit('room:changeGame', { roomId: room.id, gameType: nextGame });
+  const handleGameChange = (e) => {
+    const newGame = e.target.value;
+    if (socket && room) {
+      socket.emit('room:changeGame', { roomId: room.id, gameType: newGame, settings: { maxRounds } });
     }
-  }
+  };
+
+  const handleMaxRoundsChange = (e) => {
+    const newVal = Number(e.target.value);
+    setMaxRounds(newVal);
+    if (socket && room) {
+      socket.emit('room:changeGame', { roomId: room.id, gameType: room.gameType, settings: { maxRounds: newVal } });
+    }
+  };
 
   if (loading) {
     return (
@@ -200,7 +218,29 @@ export default function Room() {
             >
               <option value="HORSE_RACE">🏇 แข่งม้า</option>
               <option value="MINORITY_VOTE">🗳️ โหวตข้างน้อย</option>
+              <option value="PANIC_JUMP">🪂 ร่มชูชีพวัดใจ</option>
             </select>
+
+            {room?.gameType === 'PANIC_JUMP' && (
+              <div className="mt-md text-left">
+                <label className="flex justify-between" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span>จำนวนรอบที่จะเล่น</span>
+                  <span className="text-cyan font-bold">{maxRounds} รอบ</span>
+                </label>
+                <input
+                  type="range"
+                  className="range-slider"
+                  min={1}
+                  max={10}
+                  value={maxRounds}
+                  onChange={handleMaxRoundsChange}
+                />
+                <div className="flex justify-between text-xs text-muted-color">
+                  <span>1</span>
+                  <span>10</span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <span className="badge secondary" style={{ fontSize: '0.875rem', padding: '4px 16px' }}>

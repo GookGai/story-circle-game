@@ -8,6 +8,7 @@ import { authenticateSocket } from "../middleware/auth.js";
 import roomHandler from "./roomHandler.js";
 import horseRaceHandler from "./horseRace.js";
 import minorityVoteHandler from "./minorityVote.js";
+import panicJumpHandler from "./panicJump.js";
 
 // Track connected users: userId -> socketId
 const connectedUsers = new Map();
@@ -32,6 +33,7 @@ export function initializeSocketHandlers(io) {
     roomHandler(io, socket, connectedUsers);
     horseRaceHandler(io, socket, connectedUsers);
     minorityVoteHandler(io, socket, connectedUsers);
+    panicJumpHandler(io, socket, connectedUsers);
 
     // ─── Disconnect ────────────────────────────────────────────────────────
     socket.on("disconnect", (reason) => {

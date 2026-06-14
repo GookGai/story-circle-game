@@ -34,6 +34,7 @@ model User {
   drinkStats   DrinkStat[]
   createdRooms Room[]        @relation("HostedRooms")
   setRounds    VoteRound[]   @relation("QuestionSetter")
+  panicJumps   PanicJumpAction[]
 }
 
 // ─── Room ────────────────────────────────────────────────────────────────────
@@ -44,15 +45,17 @@ model Room {
   hostId     String
   gameType   String
   maxPlayers Int        @default(15)
+  settings   Json?
   status     RoomStatus @default(WAITING)
   createdAt  DateTime   @default(now())
 
   // Relations
-  host       User         @relation("HostedRooms", fields: [hostId], references: [id])
-  players    RoomPlayer[]
-  horseRaces HorseRace[]
-  voteRounds VoteRound[]
-  drinkStats DrinkStat[]
+  host           User            @relation("HostedRooms", fields: [hostId], references: [id])
+  players        RoomPlayer[]
+  horseRaces     HorseRace[]
+  voteRounds     VoteRound[]
+  drinkStats     DrinkStat[]
+  panicJumpGame  PanicJumpGame?
 }
 
 // ─── Room Player (join table) ────────────────────────────────────────────────
@@ -160,4 +163,47 @@ model DrinkStat {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
+}
+
+// ─── Panic Jump ──────────────────────────────────────────────────────────────
+
+model PanicJumpGame {
+  id           String           @id @default(uuid())
+  roomId       String           @unique
+  currentRound Int              @default(1)
+  maxRounds    Int              @default(3)
+  status       String           @default("WAITING") // WAITING | ROUND_START | JUMPING | REVEALED | ENDED
+
+  // Relations
+  room         Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  rounds       PanicJumpRound[]
+}
+
+model PanicJumpRound {
+  id       String            @id @default(uuid())
+  gameId   String
+  roundNum Int
+  quota    Int
+  status   String            @default("JUMPING") // JUMPING | REVEALED
+  createdAt DateTime         @default(now())
+  
+  // Relations
+  game     PanicJumpGame     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  jumps    PanicJumpAction[]
+}
+
+model PanicJumpAction {
+  id        String         @id @default(uuid())
+  roundId   String
+  userId    String
+  jumpOrder Int
+  survived  Boolean        @default(false)
+  points    Int            @default(0)
+  createdAt DateTime       @default(now())
+
+  // Relations
+  round     PanicJumpRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, userId])
 }

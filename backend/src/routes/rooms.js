@@ -24,7 +24,7 @@ function generateRoomCode() {
 // ─── POST / — Create a new room ─────────────────────────────────────────────
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { gameType, maxPlayers } = req.body;
+    const { gameType, maxPlayers, settings } = req.body;
 
     if (!gameType) {
       return res.status(400).json({ error: "กรุณาเลือกประเภทเกม" });
@@ -46,6 +46,7 @@ router.post("/", authenticate, async (req, res) => {
           hostId: req.user.id,
           gameType,
           maxPlayers: maxPlayers || 15,
+          settings: settings || {},
         },
       });
 

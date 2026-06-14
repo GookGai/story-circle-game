@@ -8,6 +8,112 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Pre-defined local questions for offline fallbacks
+const FALLBACK_QUESTIONS = {
+  general: [
+    { question: "ถ้าต้องเลือกอย่างหนึ่ง ตลอดชีวิตนี้คุณจะเลือกอะไร?", optionA: "กินบุฟเฟต์ได้ไม่อั้นแต่เหงา", optionB: "มีเพื่อนเยอะแยะแต่กินได้แค่ข้าวไข่เจียว" },
+    { question: "คุณยอมรับข้อเสนอไหนมากกว่ากัน?", optionA: "เงิน 10 ล้านบาทแต่ห้ามใช้มือถือ 1 ปี", optionB: "เงิน 1 แสนบาทแต่ใช้ชีวิตปกติ" }
+  ],
+  travel: [
+    { question: "จัดทริปเที่ยววันหยุดยาวนี้ ไปไหนดี?", optionA: "ไปลุยปีนเขาเดินป่า ⛰️", optionB: "ไปนอนรับลมชิลๆ ที่ทะเล 🌊" },
+    { question: "ถ้าต้องเลือกนอนค้างคืน?", optionA: "โรงแรมหรู 5 ดาวริมหาด 🏨", optionB: "กางเต็นท์นอนดูดาวบนดอย ⛺" }
+  ],
+  food: [
+    { question: "เย็นนี้กินอะไรกันดีในวง?", optionA: "ชาบูร้อนๆ น้ำดำเข้มข้น 🍲", optionB: "หมูกระทะเกรียมๆ หอมเนย 🥓" },
+    { question: "ข้อพิพาทระดับชาติเกี่ยวกับกะเพรา?", optionA: "กะเพราแท้ต้องใส่แค่ใบกะเพรา! 🌿", optionB: "ใส่ถั่วฝักยาว/ข้าวโพดอ่อนได้ อร่อยดี 🌽" }
+  ],
+  love: [
+    { question: "ถ้าต้องเจอสถานการณ์แบบนี้?", optionA: "แฟนเก่าที่ยังรักทักมาชวนคุย 💬", optionB: "เจอคนใหม่ที่ตรงสเปกทุกอย่างเข้ามาจีบ 😍" },
+    { question: "คุณอยากได้แฟนแบบไหนมากกว่ากัน?", optionA: "ขี้บ่นแต่ทำอาหารอร่อยดูแลดี 🍳", optionB: "พูดเพราะหวานเจี๊ยบแต่ทำกับข้าวไม่เป็นเลย 🧁" }
+  ],
+  funny: [
+    { question: "ถ้าตื่นมาแล้วพบว่าตัวเองกลายเป็นสัตว์?", optionA: "เป็นแมวนอนอืดมีคนคอยเลี้ยง 🐱", optionB: "เป็นนกบินไปไหนก็ได้ตามใจชอบ 🐦" },
+    { question: "พลังพิเศษที่คุณอยากได้?", optionA: "ล่องหนได้แต่อดนอน 👻", optionB: "บินได้แต่บินช้าเท่าความเร็วเดิน 🦅" }
+  ],
+  party: [
+    { question: "สไตล์การดื่มของคุณคือแบบไหน?", optionA: "เน้นชนแก้วรัวๆ สายเต้นยับ 💃", optionB: "นั่งจิบชิลๆ เม้าท์มอยเรื่องชีวิต 🗣️" },
+    { question: "เครื่องดื่มหลักประจำวงคืนนี้?", optionA: "เบียร์เย็นเจี๊ยบฟองนุ่ม 🍺", optionB: "เหล้าผสมเข้มๆ สเปเชียลมิกซ์ 🥃" }
+  ]
+};
+
+// Request question from OpenRouter or return null on failure
+async function queryOpenRouter(category) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.log("⚠️ OPENROUTER_API_KEY not found in env. Using offline fallback.");
+    return null;
+  }
+
+  const catMap = {
+    general: "ทั่วไป กวนๆ ชวนฮา",
+    travel: "การท่องเที่ยว เดินทาง ผจญภัย",
+    food: "ของกิน อาหารการกิน บุฟเฟต์ ร้านเด็ด",
+    love: "ความรัก แฟนเก่า แฟนใหม่ การจีบ ความสัมพันธ์",
+    funny: "เรื่องสมมติสุดฮา เรื่องตลก พลังวิเศษ",
+    party: "ปาร์ตี้ วงเหล้า การดื่ม กิจกรรมสนุกๆ"
+  };
+
+  const categoryName = catMap[category] || "ทั่วไป";
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Story Circle"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `คุณเป็น AI ผู้ช่วยคิดคำถามสำหรับเกมปาร์ตี้วงเหล้า 'เลือกเสียงส่วนน้อย' (Minority Vote)
+เมื่อได้รับหมวดหมู่คำถาม ให้คุณสุ่มคำถามกวนๆ สนุกๆ หรือประเด็นที่ชวนถกเถียง ที่คนในวงเหล้ามักมีความคิดแตกแยกเป็น 2 ฝ่าย
+โดยต้องตอบกลับในรูปแบบ JSON วัตถุที่มี 3 คีย์ดังนี้เท่านั้น:
+{
+  "question": "คำถามภาษาไทยกวนๆ ชวนฮา (เช่น ระหว่างเที่ยวภูเขากับเที่ยวทะเลคุณเลือกอะไร?)",
+  "optionA": "ตัวเลือก A สั้นๆ ได้ใจความ (เช่น ไปลุยภูเขา ⛰️)",
+  "optionB": "ตัวเลือก B สั้นๆ ได้ใจความ (เช่น ไปชิลทะเล 🌊)"
+}
+ห้ามมีข้อความอื่นนอกเหนือจาก JSON ห้ามใส่ Markdown code block`
+          },
+          {
+            role: "user",
+            content: `ขอคำถามหมวดหมู่: ${categoryName}`
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API response status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (content) {
+      const parsed = JSON.parse(content.trim());
+      if (parsed.question && parsed.optionA && parsed.optionB) {
+        return parsed;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error("❌ OpenRouter API call failed:", err.message);
+    return null;
+  }
+}
+
+// Fetch a random offline question from local fallbacks
+function getOfflineQuestion(category) {
+  const list = FALLBACK_QUESTIONS[category] || FALLBACK_QUESTIONS.general;
+  const randomIndex = Math.floor(Math.random() * list.length);
+  return list[randomIndex];
+}
+
 /**
  * Helper: Reveal the vote results, count votes, determine minority, assign drinks, broadcast
  */
@@ -139,6 +245,11 @@ export default function minorityVoteHandler(io, socket, connectedUsers) {
       }
 
       const finalQuestion = question?.trim() || "โหวตเสียงข้างน้อย! 🗳️";
+
+      // Delete old vote rounds in this room to keep DB clean (cascades and deletes votes)
+      await prisma.voteRound.deleteMany({
+        where: { roomId }
+      });
 
       // Create new vote round
       const round = await prisma.voteRound.create({
@@ -317,6 +428,24 @@ export default function minorityVoteHandler(io, socket, connectedUsers) {
     } catch (error) {
       console.error("vote:nextTurn error:", error);
       callback?.({ error: "เกิดข้อผิดพลาด" });
+    }
+  });
+
+  /**
+   * vote:generateAIQuestion — Generate an AI question (or offline fallback) for the setter
+   */
+  socket.on("vote:generateAIQuestion", async ({ category }, callback) => {
+    try {
+      console.log(`🤖 AI Question requested for category: ${category}`);
+      let q = await queryOpenRouter(category);
+      if (!q) {
+        console.log(`⚠️ AI generation failed or API key missing. Using offline fallback.`);
+        q = getOfflineQuestion(category);
+      }
+      callback?.({ success: true, ...q });
+    } catch (error) {
+      console.error("vote:generateAIQuestion error:", error);
+      callback?.({ error: "เกิดข้อผิดพลาดในการสุ่มคำถามด้วย AI" });
     }
   });
 }

@@ -48,6 +48,14 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const joinAsGuest = useCallback(async (username, avatar) => {
+    const data = await api.post('/api/auth/guest', { username, avatar });
+    localStorage.setItem('token', data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
@@ -60,6 +68,7 @@ export function AuthProvider({ children }) {
     loading,
     login,
     register,
+    joinAsGuest,
     logout,
   };
 

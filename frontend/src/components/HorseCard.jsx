@@ -41,11 +41,55 @@ const HORSE_ABILITIES = {
   }
 };
 
+const renderStars = (stars, type) => {
+  const isFive = stars === 5;
+  const isOne = stars === 1;
+  
+  let starColor = 'var(--text-primary)';
+  let glow = 'none';
+  let label = '';
+  
+  if (isFive) {
+    starColor = '#ffd700'; // Gold
+    glow = '0 0 10px rgba(255, 215, 0, 0.8)';
+    label = '👑';
+  } else if (isOne) {
+    starColor = '#ff4d4d'; // Red
+    glow = '0 0 6px rgba(255, 77, 77, 0.5)';
+    label = '💩';
+  } else {
+    if (type === 'notknow') {
+      starColor = 'var(--neon-yellow)';
+      glow = '0 0 4px rgba(255, 225, 77, 0.4)';
+    } else if (type === 'guess') {
+      starColor = 'var(--neon-pink)';
+      glow = '0 0 4px rgba(255, 45, 120, 0.4)';
+    } else {
+      starColor = 'var(--neon-cyan)';
+      glow = '0 0 4px rgba(0, 212, 255, 0.4)';
+    }
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      {label && <span style={{ fontSize: '0.9rem', marginRight: '2px' }}>{label}</span>}
+      <span style={{ color: starColor, textShadow: glow, letterSpacing: '1px', fontWeight: 'bold' }}>
+        {'★'.repeat(stars)}
+      </span>
+      <span style={{ opacity: 0.12, color: '#fff', letterSpacing: '1px' }}>
+        {'★'.repeat(5 - stars)}
+      </span>
+    </span>
+  );
+};
+
 export default function HorseCard({
   index,
   emoji,
   name,
-  stats,
+  guruNotKnow,
+  guruGuess,
+  guruRandom,
   selected,
   betCount = 0,
   onClick,
@@ -63,7 +107,7 @@ export default function HorseCard({
         display: 'flex', 
         flexDirection: 'column', 
         gap: '12px', 
-        minHeight: '180px', 
+        minHeight: '220px', 
         justifyContent: 'space-between', 
         position: 'relative',
         padding: '16px',
@@ -80,7 +124,7 @@ export default function HorseCard({
         </div>
       )}
 
-      {/* Center Section: Emoji, Name, and Stats */}
+      {/* Center Section: Emoji, Name, and Stars */}
       <div className="animate-slide-up" style={{ 
         display: 'flex',
         flexDirection: 'column',
@@ -97,21 +141,20 @@ export default function HorseCard({
           {name}
         </div>
 
-        <div className="text-xs text-muted-color" style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          flexWrap: 'wrap', 
-          gap: '0 6px', 
-          whiteSpace: 'nowrap', 
-          width: '100%', 
-          textAlign: 'center' 
-        }}>
-          <span>⚡ เร็ว: <span style={{ color: 'var(--neon-pink)', fontWeight: 'bold' }}>{stats.speed}</span></span>
-          <span style={{ opacity: 0.3 }}>|</span>
-          <span>💪 กำลัง: <span style={{ color: 'var(--neon-cyan)', fontWeight: 'bold' }}>{stats.stamina}</span></span>
-          <span style={{ opacity: 0.3 }}>|</span>
-          <span>🍀 โชค: <span style={{ color: 'var(--neon-yellow)', fontWeight: 'bold' }}>{stats.luck}</span></span>
+        {/* Guru Ratings Display */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', alignItems: 'center', margin: '4px 0', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.78rem', gap: '8px', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>🤷 กรู(ไม่)รู:</span>
+            {renderStars(guruNotKnow || 3, 'notknow')}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.78rem', gap: '8px', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>🎲 กรูเดา:</span>
+            {renderStars(guruGuess || 3, 'guess')}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.78rem', gap: '8px', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>🤪 กรูมั่ว:</span>
+            {renderStars(guruRandom || 3, 'random')}
+          </div>
         </div>
       </div>
 

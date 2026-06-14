@@ -175,6 +175,13 @@ export default function HorseRace() {
     }, [user])
   );
 
+  useSocketEvent(
+    'room:goBackToLobby',
+    useCallback(() => {
+      navigate(`/room/${code}`);
+    }, [navigate, code])
+  );
+
   function handleBet(horseId) {
     if (phase !== PHASES.BETTING) return;
     setSelectedHorseId(horseId);
@@ -196,13 +203,29 @@ export default function HorseRace() {
   }
 
   function handleBackToRoom() {
-    navigate(`/room/${code}`);
+    if (socket && code) {
+      socket.emit('room:backToLobby', code);
+    }
   }
+
+  const getHorseEmoji = (horseId) => {
+    const idx = horses.findIndex(h => h.id === horseId);
+    if (idx === -1) return '🏇';
+    return HORSE_EMOJIS[idx % HORSE_EMOJIS.length];
+  };
+
+  const guruNotKnow5 = horses.find(h => h.guruNotKnow === 5);
+  const guruGuess5 = horses.find(h => h.guruGuess === 5);
+  const guruRandom5 = horses.find(h => h.guruRandom === 5);
+
+  const guruNotKnow1 = horses.find(h => h.guruNotKnow === 1);
+  const guruGuess1 = horses.find(h => h.guruGuess === 1);
+  const guruRandom1 = horses.find(h => h.guruRandom === 1);
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-center mb-lg animate-slide-up">
-        <h1 className="page-title mb-0">🏇 แข่งม้า</h1>
+      <div className="game-header-bar animate-slide-up">
+        <h1 className="page-title mb-0" style={{ fontSize: '1.4rem' }}>🏇 แข่งม้า</h1>
         <DrinkCounter count={drinkCount} />
       </div>
 
@@ -213,6 +236,74 @@ export default function HorseRace() {
             <Timer seconds={timer} total={30} />
             <p className="text-secondary-color mt-sm">เลือกม้าที่จะแทง!</p>
           </div>
+
+          {horses.length > 0 && (
+            <div className="glass-card no-hover mb-lg" style={{ 
+              padding: '16px', 
+              border: '1px solid rgba(255, 225, 77, 0.15)', 
+              background: 'rgba(255, 225, 77, 0.02)', 
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(255, 225, 77, 0.02)'
+            }}>
+              <h3 className="text-center font-bold mb-md" style={{ 
+                color: '#ffd700', 
+                fontSize: '1.05rem', 
+                textShadow: '0 0 8px rgba(255, 215, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}>
+                🔮 โพยทรรศนะจาก 3 กูรู
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 1.4fr', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+                  <span>กูรูวิเคราะห์</span>
+                  <span style={{ color: 'var(--neon-green)' }}>👑 เต็งห้าดาว</span>
+                  <span style={{ color: '#ff4d4d' }}>💩 บ๊วยหนึ่งดาว</span>
+                </div>
+                
+                {/* Guru 1 */}
+                {guruNotKnow5 && guruNotKnow1 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 1.4fr', gap: '8px', alignItems: 'center', fontSize: '0.82rem' }}>
+                    <span className="font-semibold" style={{ color: 'var(--neon-yellow)' }}>🤷 กรู(ไม่)รู</span>
+                    <span className="truncate" style={{ color: '#ffd700', fontWeight: '500' }}>
+                      {getHorseEmoji(guruNotKnow5.id)} {guruNotKnow5.name}
+                    </span>
+                    <span className="truncate" style={{ color: 'var(--text-muted)', opacity: 0.85 }}>
+                      {getHorseEmoji(guruNotKnow1.id)} {guruNotKnow1.name}
+                    </span>
+                  </div>
+                )}
+
+                {/* Guru 2 */}
+                {guruGuess5 && guruGuess1 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 1.4fr', gap: '8px', alignItems: 'center', fontSize: '0.82rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px' }}>
+                    <span className="font-semibold" style={{ color: 'var(--neon-pink)' }}>🎲 กรูเดา</span>
+                    <span className="truncate" style={{ color: '#ffd700', fontWeight: '500' }}>
+                      {getHorseEmoji(guruGuess5.id)} {guruGuess5.name}
+                    </span>
+                    <span className="truncate" style={{ color: 'var(--text-muted)', opacity: 0.85 }}>
+                      {getHorseEmoji(guruGuess1.id)} {guruGuess1.name}
+                    </span>
+                  </div>
+                )}
+
+                {/* Guru 3 */}
+                {guruRandom5 && guruRandom1 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr 1.4fr', gap: '8px', alignItems: 'center', fontSize: '0.82rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px' }}>
+                    <span className="font-semibold" style={{ color: 'var(--neon-cyan)' }}>🤪 กรูมั่ว</span>
+                    <span className="truncate" style={{ color: '#ffd700', fontWeight: '500' }}>
+                      {getHorseEmoji(guruRandom5.id)} {guruRandom5.name}
+                    </span>
+                    <span className="truncate" style={{ color: 'var(--text-muted)', opacity: 0.85 }}>
+                      {getHorseEmoji(guruRandom1.id)} {guruRandom1.name}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {!horses.length && (
             <div className="text-center py-xl">
@@ -228,7 +319,9 @@ export default function HorseRace() {
                 index={i}
                 emoji={HORSE_EMOJIS[i % HORSE_EMOJIS.length]}
                 name={horse.name}
-                stats={{ speed: horse.speed, stamina: horse.stamina, luck: horse.luck }}
+                guruNotKnow={horse.guruNotKnow}
+                guruGuess={horse.guruGuess}
+                guruRandom={horse.guruRandom}
                 selected={selectedHorseId === horse.id}
                 betCount={bets[horse.id] || 0}
                 onClick={() => handleBet(horse.id)}
@@ -250,10 +343,19 @@ export default function HorseRace() {
       {/* Racing Phase */}
       {phase === PHASES.RACING && (
         <div className="animate-slide-up">
-          <div className="text-center mb-lg">
-            <h2 className="text-xl font-bold animate-pulse">
-              🏁 แข่งอยู่!
-            </h2>
+          <div className="race-status-header">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <span className="pulse-ring" />
+              <h2 className="text-xl font-bold" style={{ margin: 0 }}>
+                🏁 แข่งอยู่!
+              </h2>
+              <span className="pulse-ring" />
+            </div>
+            {selectedHorseId && (
+              <p className="text-xs text-secondary-color" style={{ marginTop: '6px', opacity: 0.8 }}>
+                คุณเชียร์: {HORSE_EMOJIS[horses.findIndex(h => h.id === selectedHorseId) % HORSE_EMOJIS.length]} {horses.find(h => h.id === selectedHorseId)?.name}
+              </p>
+            )}
           </div>
 
           <div className="race-track">

@@ -30,6 +30,63 @@ function sanitizeUser(user) {
   return userWithoutPassword;
 }
 
+// ─── POST /guest ─────────────────────────────────────────────────────────────
+router.post("/guest", async (req, res) => {
+  try {
+    const { username, avatar } = req.body;
+
+    if (!username || username.trim().length < 1) {
+      return res.status(400).json({ error: "กรุณากรอกชื่อเล่น" });
+    }
+
+    const cleanName = username.trim().substring(0, 15);
+
+    // Generate a unique username by appending a random tag (e.g. Nick#1234)
+    let finalUsername = "";
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      attempts++;
+      const randTag = Math.floor(1000 + Math.random() * 9000); // 1000 to 9999
+      finalUsername = `${cleanName}#${randTag}`;
+      
+      const existing = await prisma.user.findUnique({
+        where: { username: finalUsername }
+      });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+
+    if (!isUnique) {
+      finalUsername = `${cleanName}#${Date.now().toString().slice(-4)}`;
+    }
+
+    // Create guest user in DB with a random hashed password
+    const dummyPassword = Math.random().toString(36) + Date.now().toString();
+    const hashedPassword = await bcrypt.hash(dummyPassword, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        username: finalUsername,
+        password: hashedPassword,
+        avatar: avatar || "cat",
+      },
+    });
+
+    const token = generateToken(user);
+
+    res.status(201).json({
+      token,
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    console.error("Guest login error:", error);
+    res.status(500).json({ error: "เกิดข้อผิดพลาดในการเข้าร่วมแบบชั่วคราว" });
+  }
+});
+
 // ─── POST /register ──────────────────────────────────────────────────────────
 router.post("/register", async (req, res) => {
   try {

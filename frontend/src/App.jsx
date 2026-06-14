@@ -9,9 +9,11 @@ import Room from './pages/Room';
 import HorseRace from './pages/HorseRace';
 import MinorityVote from './pages/MinorityVote';
 import Stats from './pages/Stats';
+import JoinRoom from './pages/JoinRoom';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -22,6 +24,13 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
+    const pathParts = location.pathname.split('/');
+    const isRoomOrGame = pathParts[1] === 'room' || pathParts[1] === 'game';
+    const code = pathParts[1] === 'room' ? pathParts[2] : pathParts[3];
+
+    if (isRoomOrGame && code) {
+      return <Navigate to={`/join/${code}`} replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
@@ -38,6 +47,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/join/:code" element={<JoinRoom />} />
         <Route
           path="/lobby"
           element={

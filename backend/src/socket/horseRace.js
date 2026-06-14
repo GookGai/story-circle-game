@@ -8,6 +8,84 @@ import { simulateRace } from "../utils/horseEngine.js";
 
 const prisma = new PrismaClient();
 
+// Seeded random number generator
+function seedRandom(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash % 1000) / 1000;
+}
+
+// Compute deterministic guru ratings for all horses in a race
+// Enforces: exactly one 5-star, one 1-star, and remaining 6 horses get 2-4 stars.
+function computeGuruRatings(raceId, horses) {
+  // Sort horses by potential: speed * 0.4 + stamina * 0.3 + luck * 0.3
+  const sorted = [...horses].sort((a, b) => {
+    const potentialA = a.speed * 0.4 + a.stamina * 0.3 + a.luck * 0.3;
+    const potentialB = b.speed * 0.4 + b.stamina * 0.3 + b.luck * 0.3;
+    return potentialB - potentialA;
+  });
+
+  const ratingsMap = {};
+  horses.forEach(h => {
+    ratingsMap[h.id] = { notknow: 3, guess: 3, random: 3 };
+  });
+
+  const guruNames = ["notknow", "guess", "random"];
+
+  guruNames.forEach(guru => {
+    const seed = `${raceId}_${guru}`;
+    const randAccuracy = seedRandom(seed + "_accuracy");
+    
+    let fiveStarIndex = 0;
+    let oneStarIndex = 7;
+
+    if (randAccuracy < 0.50) {
+      // 50% accurate:
+      // Pick 5-star from top 3 (ranks 0, 1, 2)
+      const r5 = Math.floor(seedRandom(seed + "_5star") * 3);
+      const h5 = sorted[r5];
+      
+      // Pick 1-star from bottom 3 (ranks 5, 6, 7)
+      const r1 = 5 + Math.floor(seedRandom(seed + "_1star") * 3);
+      const h1 = sorted[r1];
+
+      fiveStarIndex = sorted.findIndex(h => h.id === h5.id);
+      oneStarIndex = sorted.findIndex(h => h.id === h1.id);
+    } else {
+      // 50% chaotic:
+      // Pick 5-star completely randomly
+      fiveStarIndex = Math.floor(seedRandom(seed + "_5star_chaos") * 8);
+      // Pick 1-star completely randomly (not equal to 5-star)
+      oneStarIndex = Math.floor(seedRandom(seed + "_1star_chaos") * 8);
+      while (oneStarIndex === fiveStarIndex) {
+        oneStarIndex = (oneStarIndex + 1) % 8;
+      }
+    }
+
+    // Assign ratings
+    sorted.forEach((h, idx) => {
+      let stars = 3;
+      if (idx === fiveStarIndex) {
+        stars = 5;
+      } else if (idx === oneStarIndex) {
+        stars = 1;
+      } else {
+        // Random 2 to 4
+        const rndVal = seedRandom(`${seed}_stars_${h.id}`);
+        if (rndVal < 0.33) stars = 2;
+        else if (rndVal < 0.66) stars = 3;
+        else stars = 4;
+      }
+      
+      ratingsMap[h.id][guru] = stars;
+    });
+  });
+
+  return ratingsMap;
+}
+
 // Thai horse names and their colors
 const HORSE_TEMPLATES = [
   { name: "พญาลม", color: "#ff2d78" },
@@ -53,6 +131,11 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         return callback?.({ error: "ไม่พบห้องนี้" });
       }
 
+      // Delete old races in this room to keep DB clean (cascade deletes horses & bets)
+      await prisma.horseRace.deleteMany({
+        where: { roomId }
+      });
+
       // Create race record
       const race = await prisma.horseRace.create({
         data: {
@@ -61,7 +144,7 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         },
       });
 
-      // Create 5 horses with randomized stats
+      // Create 8 horses with randomized stats
       const horses = await Promise.all(
         HORSE_TEMPLATES.map((template) =>
           prisma.horse.create({
@@ -77,16 +160,19 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         )
       );
 
-      // Broadcast new race and horses to all players in the room
+      // Pre-compute ratings mapping for this race
+      const ratingsMap = computeGuruRatings(race.id, horses);
+
+      // Broadcast new race and horses to all players in the room (hiding real stats, showing guru ratings)
       io.to(roomId).emit("horse:raceCreated", {
         race: { id: race.id, status: race.status },
         horses: horses.map((h) => ({
           id: h.id,
           name: h.name,
           color: h.color,
-          speed: h.speed,
-          stamina: h.stamina,
-          luck: h.luck,
+          guruNotKnow: ratingsMap[h.id].notknow,
+          guruGuess: ratingsMap[h.id].guess,
+          guruRandom: ratingsMap[h.id].random,
         })),
       });
 

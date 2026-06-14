@@ -22,6 +22,7 @@ export default function Room() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Fetch room data
   useEffect(() => {
@@ -68,10 +69,8 @@ export default function Room() {
     useCallback((data) => {
       setPlayers((prev) => {
         if (prev.find((p) => p.user.id === data.userId)) return prev;
-        // Fetch full list to be safe, but optimistically add
         return [...prev, { id: 'temp', userId: data.userId, user: { id: data.userId, username: data.username, avatar: 'cat' } }];
       });
-      // Better to just request fresh list:
       if (socket) socket.emit('room:players', code, (res) => {
         if (res.players) setPlayers(res.players);
       });
@@ -86,17 +85,27 @@ export default function Room() {
   );
 
   useSocketEvent(
+    'room:gameChanged',
+    useCallback((data) => {
+      setRoom((prev) => {
+        if (!prev) return prev;
+        return { ...prev, gameType: data.gameType };
+      });
+    }, [])
+  );
+
+  useSocketEvent(
     'room:gameStarted',
     useCallback(
       (data) => {
-        const gameType = room?.gameType || data.gameType;
+        const gameType = data.gameType;
         if (gameType === 'HORSE_RACE') {
           navigate(`/game/horse/${code}`);
         } else if (gameType === 'MINORITY_VOTE') {
           navigate(`/game/vote/${code}`);
         }
       },
-      [code, room, navigate]
+      [code, navigate]
     )
   );
 
@@ -119,6 +128,13 @@ export default function Room() {
   function handleLeave() {
     if (socket) socket.emit('room:leave', code);
     navigate('/lobby');
+  }
+
+  function handleGameChange(e) {
+    const nextGame = e.target.value;
+    if (socket && room && nextGame) {
+      socket.emit('room:changeGame', { roomId: room.id, gameType: nextGame });
+    }
   }
 
   if (loading) {
@@ -144,7 +160,7 @@ export default function Room() {
   return (
     <div className="page-container">
       {/* Room Code */}
-      <div className="text-center mb-xl animate-slide-up">
+      <div className="text-center mb-xl animate-slide-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <p className="text-sm text-muted-color mb-xs">รหัสห้อง</p>
         <div className="room-code" onClick={handleCopyCode} title="คัดลอกรหัสห้อง">
           {code}
@@ -152,13 +168,45 @@ export default function Room() {
         <p className="text-xs text-muted-color mt-sm">
           {copied ? '✅ คัดลอกแล้ว!' : 'แตะเพื่อคัดลอก'}
         </p>
+        <button
+          className="btn btn-secondary mt-sm"
+          style={{ padding: '6px 16px', fontSize: '0.8rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => setShowQRModal(true)}
+        >
+          📷 แสดง QR Code
+        </button>
       </div>
 
-      {/* Game Badge */}
+      {/* Game Badge / Swapping Dropdown */}
       <div className="text-center mb-lg animate-slide-up stagger-1">
-        <span className="badge secondary" style={{ fontSize: '0.875rem', padding: '4px 16px' }}>
-          {gameInfo.emoji} {gameInfo.name}
-        </span>
+        {isHost ? (
+          <div className="input-group text-center" style={{ maxWidth: '280px', margin: '0 auto' }}>
+            <label className="font-semibold mb-xsDisplay" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              🎮 เลือกเกมที่จะเล่น
+            </label>
+            <select
+              className="input-field"
+              value={room?.gameType}
+              onChange={handleGameChange}
+              style={{
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.03)',
+                color: 'white',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '12px',
+                textAlign: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="HORSE_RACE">🏇 แข่งม้า</option>
+              <option value="MINORITY_VOTE">🗳️ โหวตข้างน้อย</option>
+            </select>
+          </div>
+        ) : (
+          <span className="badge secondary" style={{ fontSize: '0.875rem', padding: '4px 16px' }}>
+            {gameInfo.emoji} {gameInfo.name}
+          </span>
+        )}
       </div>
 
       {/* Players */}
@@ -204,6 +252,44 @@ export default function Room() {
           🚪 ออกจากห้อง
         </button>
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="drink-overlay" onClick={() => setShowQRModal(false)} style={{ cursor: 'pointer' }}>
+          <div
+            className="glass-card no-hover text-center animate-bounce-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 340, width: '90%', padding: '32px 24px', cursor: 'default' }}
+          >
+            <div style={{ fontSize: '3rem', marginBottom: '8px' }}>📷</div>
+            <h3 className="text-lg font-bold mb-md" style={{ color: 'var(--neon-cyan)' }}>สแกนเข้าร่วมวง</h3>
+            <div
+              style={{
+                background: 'white',
+                padding: '12px',
+                borderRadius: '16px',
+                display: 'inline-block',
+                boxShadow: '0 0 25px rgba(0, 212, 255, 0.2)',
+                marginBottom: '16px',
+              }}
+            >
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                  window.location.origin + '/join/' + code
+                )}`}
+                alt="Room QR Code"
+                style={{ width: '200px', height: '200px', display: 'block' }}
+              />
+            </div>
+            <p className="text-xs text-secondary-color mb-lg" style={{ lineHeight: '1.4' }}>
+              ให้เพื่อนสแกน QR Code นี้เพื่อเข้าเล่นเกมโดยไม่ต้องล็อกอิน แค่ตั้งชื่อเล่นก็เข้าห้องได้ทันที!
+            </p>
+            <button className="btn btn-danger btn-block" onClick={() => setShowQRModal(false)}>
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

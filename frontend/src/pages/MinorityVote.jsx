@@ -48,6 +48,10 @@ export default function MinorityVote() {
   const [setterInfo, setSetterInfo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [isHost, setIsHost] = useState(false);
+  
+  const [aiCategory, setAiCategory] = useState('general');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // Initialize room
   useEffect(() => {
@@ -187,6 +191,13 @@ export default function MinorityVote() {
     }, [])
   );
 
+  useSocketEvent(
+    'room:goBackToLobby',
+    useCallback(() => {
+      navigate(`/room/${code}`);
+    }, [navigate, code])
+  );
+
   function handleSubmitQuestion() {
     if (!optionA.trim() || !optionB.trim()) return;
     setSubmitting(true);
@@ -197,6 +208,19 @@ export default function MinorityVote() {
       optionB: optionB.trim(),
     });
     setSubmitting(false);
+  }
+
+  function handleGenerateAIQuestion() {
+    if (!socket) return;
+    setAiLoading(true);
+    socket.emit('vote:generateAIQuestion', { category: aiCategory }, (res) => {
+      setAiLoading(false);
+      if (res && res.success) {
+        setQuestion(res.question || '');
+        setOptionA(res.optionA || '');
+        setOptionB(res.optionB || '');
+      }
+    });
   }
 
   function handleVote(option) {
@@ -215,13 +239,15 @@ export default function MinorityVote() {
   }
 
   function handleBackToRoom() {
-    navigate(`/room/${code}`);
+    if (socket && code) {
+      socket.emit('room:backToLobby', code);
+    }
   }
 
   return (
     <div className="page-container">
-      <div className="flex justify-between items-center mb-lg animate-slide-up">
-        <h1 className="page-title mb-0">🗳️ โหวตข้างน้อย</h1>
+      <div className="game-header-bar animate-slide-up">
+        <h1 className="page-title mb-0" style={{ fontSize: '1.4rem' }}>🗳️ โหวตข้างน้อย</h1>
         <DrinkCounter count={drinkCount} />
       </div>
 
@@ -238,8 +264,74 @@ export default function MinorityVote() {
           {isSetter ? (
             <div className="glass-card no-hover">
               <h3 className="text-lg font-semibold mb-lg text-center">
-                ✍️ ตั้งตัวเลือกคำตอบ
+                ✍️ ตั้งคำถามและตัวเลือก
               </h3>
+
+              {/* AI Helper Panel */}
+              <div
+                className="rounded-lg mb-lg"
+                style={{
+                  background: 'rgba(0, 212, 255, 0.04)',
+                  border: '1px solid rgba(0, 212, 255, 0.12)',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                <span
+                  className="text-xs font-bold"
+                  style={{ color: 'var(--neon-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  🤖 ตัวช่วยคิดโจทย์ด้วย AI
+                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    className="input-field"
+                    value={aiCategory}
+                    onChange={(e) => setAiCategory(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      padding: '6px 12px',
+                      background: 'var(--bg-card)',
+                      color: 'white',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                    }}
+                    disabled={aiLoading || submitting}
+                  >
+                    <option value="general">🎲 ทั่วไปกวนๆ</option>
+                    <option value="travel">⛰️ ท่องเที่ยว</option>
+                    <option value="food">🍲 อาหารการกิน</option>
+                    <option value="love">💖 เรื่องความรัก</option>
+                    <option value="funny">👻 สมมติขำๆ</option>
+                    <option value="party">🍻 สายตี้วงเหล้า</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleGenerateAIQuestion}
+                    disabled={aiLoading || submitting}
+                    style={{ padding: '8px 16px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                  >
+                    {aiLoading ? 'กำลังสุ่ม...' : '✨ สุ่มโจทย์'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>คำถามหลัก (ไม่บังคับ)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="เช่น เบียร์ขวดนี้ต้องเป็นของใคร? (ปล่อยว่างเพื่อใช้คำถามปกติ)"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  disabled={aiLoading || submitting}
+                />
+              </div>
 
               <div className="input-group">
                 <label>ตัวเลือก A</label>
@@ -250,6 +342,7 @@ export default function MinorityVote() {
                   value={optionA}
                   onChange={(e) => setOptionA(e.target.value)}
                   autoFocus
+                  disabled={aiLoading || submitting}
                 />
               </div>
 
@@ -261,6 +354,7 @@ export default function MinorityVote() {
                   placeholder="ตัวเลือกที่สอง (เช่น โซจู)"
                   value={optionB}
                   onChange={(e) => setOptionB(e.target.value)}
+                  disabled={aiLoading || submitting}
                 />
               </div>
 
@@ -268,7 +362,7 @@ export default function MinorityVote() {
                 className="btn btn-primary btn-block mt-md"
                 onClick={handleSubmitQuestion}
                 disabled={
-                  !optionA.trim() || !optionB.trim() || submitting
+                  !optionA.trim() || !optionB.trim() || submitting || aiLoading
                 }
               >
                 📤 เริ่มโหวต
@@ -386,13 +480,22 @@ export default function MinorityVote() {
               )}
             </div>
 
+            {/* Zoom Controls */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>🔍 ซูมกราฟ:</span>
+              <button type="button" className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }} onClick={() => setZoomLevel(z => Math.max(1, z - 0.25))}>-</button>
+              <span style={{ fontSize: '0.8rem', fontWeight: 'bold', minWidth: '36px', textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</span>
+              <button type="button" className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }} onClick={() => setZoomLevel(z => Math.min(3, z + 0.25))}>+</button>
+              <button type="button" className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }} onClick={() => setZoomLevel(1)}>รีเซ็ต</button>
+            </div>
+
             {/* Styled Vote Bars */}
             <div className="vote-reveal">
               <div 
                 className="vote-bar mb-md" 
                 style={{ 
-                  height: '42px', 
-                  borderRadius: '21px',
+                  height: `${42 * zoomLevel}px`, 
+                  borderRadius: `${21 * zoomLevel}px`,
                   border: results.isTie ? '1px solid rgba(255, 45, 120, 0.3)' : (results.countA < results.countB ? '2px solid var(--neon-green)' : '1px solid var(--glass-border)'),
                   boxShadow: (!results.isTie && results.countA < results.countB) ? '0 0 15px rgba(124, 255, 45, 0.15)' : 'none',
                   background: 'rgba(255,255,255,0.02)',
@@ -404,13 +507,14 @@ export default function MinorityVote() {
                   style={{ 
                     width: `${results.percentA || 0}%`, 
                     height: '100%', 
-                    borderRadius: '21px',
+                    borderRadius: `${21 * zoomLevel}px`,
                     background: results.isTie ? 'var(--gradient-danger)' : (results.countA < results.countB ? 'var(--gradient-success)' : 'rgba(255,255,255,0.08)'),
                     color: (results.countA < results.countB && !results.isTie) ? '#0a0015' : 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0 15px'
+                    padding: '0 15px',
+                    fontSize: `${1 * zoomLevel}rem`
                   }}
                 >
                   <span className="font-bold">A: {currentQuestion?.optionA}</span>
@@ -421,8 +525,8 @@ export default function MinorityVote() {
               <div 
                 className="vote-bar" 
                 style={{ 
-                  height: '42px', 
-                  borderRadius: '21px',
+                  height: `${42 * zoomLevel}px`, 
+                  borderRadius: `${21 * zoomLevel}px`,
                   border: results.isTie ? '1px solid rgba(255, 45, 120, 0.3)' : (results.countB < results.countA ? '2px solid var(--neon-green)' : '1px solid var(--glass-border)'),
                   boxShadow: (!results.isTie && results.countB < results.countA) ? '0 0 15px rgba(124, 255, 45, 0.15)' : 'none',
                   background: 'rgba(255,255,255,0.02)',
@@ -434,13 +538,14 @@ export default function MinorityVote() {
                   style={{ 
                     width: `${results.percentB || 0}%`, 
                     height: '100%', 
-                    borderRadius: '21px',
+                    borderRadius: `${21 * zoomLevel}px`,
                     background: results.isTie ? 'var(--gradient-danger)' : (results.countB < results.countA ? 'var(--gradient-success)' : 'rgba(255,255,255,0.08)'),
                     color: (results.countB < results.countA && !results.isTie) ? '#0a0015' : 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0 15px'
+                    padding: '0 15px',
+                    fontSize: `${1 * zoomLevel}rem`
                   }}
                 >
                   <span className="font-bold">B: {currentQuestion?.optionB}</span>
@@ -554,6 +659,15 @@ export default function MinorityVote() {
           losers={losers}
           onDismiss={() => setShowResult(false)}
         />
+      )}
+
+      {/* Countdown Overlay */}
+      {countdown !== null && countdown > 0 && (
+        <div className="countdown-overlay animate-fade-in">
+          <div key={countdown} className="countdown-number">
+            {countdown}
+          </div>
+        </div>
       )}
     </div>
   );

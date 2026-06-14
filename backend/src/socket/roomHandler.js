@@ -8,6 +8,41 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 /**
+ * Clean up empty rooms and guest users that are no longer active
+ */
+async function cleanupRoomAndGuests(roomId) {
+  try {
+    if (!roomId) return;
+    
+    // Check if room still has players
+    const playersRemaining = await prisma.roomPlayer.count({
+      where: { roomId }
+    });
+
+    if (playersRemaining === 0) {
+      console.log(`🧹 Room ${roomId} has 0 players. Deleting room and cascading...`);
+      await prisma.room.delete({
+        where: { id: roomId }
+      });
+    }
+
+    // Clean up temporary guest users who are no longer in any room
+    const deletedGuests = await prisma.user.deleteMany({
+      where: {
+        username: { contains: "#" },
+        roomPlayers: { none: {} },
+        createdRooms: { none: {} }
+      }
+    });
+    if (deletedGuests.count > 0) {
+      console.log(`🧹 Cleaned up ${deletedGuests.count} inactive guest users.`);
+    }
+  } catch (err) {
+    console.error("Error in cleanupRoomAndGuests:", err);
+  }
+}
+
+/**
  * Initialize room socket event handlers
  * @param {object} io - Socket.IO server instance
  * @param {object} socket - Connected socket instance
@@ -123,6 +158,9 @@ export default function roomHandler(io, socket, connectedUsers) {
       });
 
       callback?.({ success: true });
+
+      // Perform room and guest cleanup
+      await cleanupRoomAndGuests(roomId);
     } catch (error) {
       console.error("room:leave error:", error);
       callback?.({ error: "เกิดข้อผิดพลาดในการออกห้อง" });
@@ -251,9 +289,79 @@ export default function roomHandler(io, socket, connectedUsers) {
       io.to(roomId).emit("room:playerList", players);
 
       callback?.({ success: true });
+
+      // Perform room and guest cleanup
+      await cleanupRoomAndGuests(roomId);
     } catch (error) {
       console.error("room:kick error:", error);
       callback?.({ error: "เกิดข้อผิดพลาดในการเตะผู้เล่น" });
     }
   });
+
+  /**
+   * room:changeGame — Change game type of the room (host only)
+   */
+  socket.on("room:changeGame", async ({ roomId, gameType }, callback) => {
+    try {
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        return callback?.({ error: "ไม่พบห้องนี้" });
+      }
+
+      if (room.hostId !== socket.user.id) {
+        return callback?.({ error: "เฉพาะเจ้าของห้องเท่านั้นที่เปลี่ยนเกมได้" });
+      }
+
+      // Update room game type
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { gameType },
+      });
+
+      // Broadcast game change to all players in the room
+      io.to(roomId).emit("room:gameChanged", { gameType });
+
+      callback?.({ success: true });
+    } catch (error) {
+      console.error("room:changeGame error:", error);
+      callback?.({ error: "เกิดข้อผิดพลาดในการเปลี่ยนเกม" });
+    }
+  });
+
+  /**
+   * room:backToLobby — Return all players in the room to the lobby (host only)
+   */
+  socket.on("room:backToLobby", async (roomIdOrCode, callback) => {
+    try {
+      let roomId = roomIdOrCode;
+      if (roomIdOrCode && roomIdOrCode.length === 6) {
+        const r = await prisma.room.findUnique({ where: { code: roomIdOrCode.toUpperCase() } });
+        if (r) roomId = r.id;
+      }
+
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        return callback?.({ error: "ไม่พบห้องนี้" });
+      }
+
+      if (room.hostId !== socket.user.id) {
+        return callback?.({ error: "เฉพาะเจ้าของห้องเท่านั้นที่ดึงผู้เล่นกลับห้องได้" });
+      }
+
+      // Update room status back to WAITING
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { status: "WAITING" },
+      });
+
+      // Broadcast back to lobby event
+      io.to(roomId).emit("room:goBackToLobby");
+
+      callback?.({ success: true });
+    } catch (error) {
+      console.error("room:backToLobby error:", error);
+      callback?.({ error: "เกิดข้อผิดพลาดในการดึงผู้เล่นกลับห้อง" });
+    }
+  });
 }
+

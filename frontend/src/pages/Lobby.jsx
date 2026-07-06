@@ -133,14 +133,14 @@ export default function Lobby() {
           <input
             type="range"
             className="range-slider"
-            min={2}
-            max={15}
+            min={3}
+            max={30}
             value={maxPlayers}
             onChange={(e) => setMaxPlayers(Number(e.target.value))}
           />
           <div className="flex justify-between text-xs text-muted-color">
-            <span>2</span>
-            <span>15</span>
+            <span>3</span>
+            <span>30</span>
           </div>
         </div>
 

@@ -3,14 +3,13 @@
  * Manages real-time room events: join, leave, player list, start game, kick
  */
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma.js";
 
-const prisma = new PrismaClient();
 
 /**
  * Clean up empty rooms and guest users that are no longer active
  */
-async function cleanupRoomAndGuests(roomId) {
+export async function cleanupRoomAndGuests(roomId) {
   try {
     if (!roomId) return;
     
@@ -57,7 +56,13 @@ export default function roomHandler(io, socket, connectedUsers) {
     try {
       const room = await prisma.room.findUnique({
         where: { code: code.toUpperCase() },
-        include: { players: true },
+        include: {
+          _count: { select: { players: true } },
+          players: {
+            where: { userId: socket.user.id },
+            select: { id: true },
+          },
+        },
       });
 
       if (!room) {
@@ -69,7 +74,7 @@ export default function roomHandler(io, socket, connectedUsers) {
       }
 
       // Check max players
-      if (room.players.length >= room.maxPlayers) {
+      if (room._count.players >= room.maxPlayers && room.players.length === 0) {
         return callback?.({ error: "ห้องเต็มแล้ว" });
       }
 

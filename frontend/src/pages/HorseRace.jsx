@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useSocket, useSocketEvent } from '../hooks/useSocket';
@@ -51,6 +51,11 @@ export default function HorseRace() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [raceBets, setRaceBets] = useState([]);
   const [horseEvents, setHorseEvents] = useState({});
+  const timelineTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (timelineTimerRef.current) clearInterval(timelineTimerRef.current);
+  }, []);
 
   // Initialize room and check host
   useEffect(() => {
@@ -138,6 +143,46 @@ export default function HorseRace() {
     }, [])
   );
 
+  useSocketEvent(
+    'horse:timeline',
+    useCallback((data) => {
+      if (timelineTimerRef.current) clearInterval(timelineTimerRef.current);
+
+      let frameIndex = 0;
+      const renderNextFrame = () => {
+        const frame = data.frames?.[frameIndex];
+        if (!frame) {
+          clearInterval(timelineTimerRef.current);
+          timelineTimerRef.current = null;
+          setRacing(false);
+          return;
+        }
+
+        const newPositions = {};
+        const newEvents = {};
+        frame.forEach(([horseId, distance, event]) => {
+          newPositions[horseId] = (distance / 2500) * 100;
+          newEvents[horseId] = event;
+        });
+        setPositions(newPositions);
+        setHorseEvents(newEvents);
+        frameIndex += 1;
+
+        if (frameIndex >= data.frames.length) {
+          clearInterval(timelineTimerRef.current);
+          timelineTimerRef.current = null;
+          setRacing(false);
+        }
+      };
+
+      renderNextFrame();
+      if (frameIndex < (data.frames?.length || 0)) {
+        timelineTimerRef.current = setInterval(renderNextFrame, data.intervalMs || 200);
+      }
+    }, [])
+  );
+
+  // Backward compatibility with servers running the previous protocol.
   useSocketEvent(
     'horse:frame',
     useCallback((data) => {

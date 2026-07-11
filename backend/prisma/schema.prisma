@@ -86,6 +86,8 @@ model HorseRace {
   room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
   horses Horse[]
   bets   Bet[]
+
+  @@index([roomId])
 }
 
 // ─── Horse ───────────────────────────────────────────────────────────────────
@@ -116,6 +118,10 @@ model Bet {
   race  HorseRace @relation(fields: [raceId], references: [id], onDelete: Cascade)
   horse Horse     @relation(fields: [horseId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // A player can only have one active choice per race. This lets the server
+  // update a bet in one query instead of deleting and recreating it.
+  @@unique([raceId, userId])
 }
 
 // ─── Vote Round ──────────────────────────────────────────────────────────────
@@ -133,6 +139,8 @@ model VoteRound {
   room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
   setter User   @relation("QuestionSetter", fields: [setterId], references: [id], onDelete: Cascade)
   votes  Vote[]
+
+  @@index([roomId])
 }
 
 // ─── Vote ────────────────────────────────────────────────────────────────────
@@ -163,6 +171,7 @@ model DrinkStat {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
+  @@index([roomId])
 }
 
 // ─── Panic Jump ──────────────────────────────────────────────────────────────

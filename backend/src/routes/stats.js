@@ -3,11 +3,10 @@
  */
 
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma.js";
 import { authenticate } from "../middleware/auth.js";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // ─── GET / — Get global leaderboard of all players ───────────────────────────
 router.get("/", authenticate, async (req, res) => {

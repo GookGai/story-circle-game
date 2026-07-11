@@ -3,10 +3,9 @@
  * Manages horse race game events: create race, bet, run simulation
  */
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma.js";
 import { simulateRace } from "../utils/horseEngine.js";
 
-const prisma = new PrismaClient();
 
 // Seeded random number generator
 function seedRandom(str) {
@@ -145,20 +144,16 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
       });
 
       // Create 8 horses with randomized stats
-      const horses = await Promise.all(
-        HORSE_TEMPLATES.map((template) =>
-          prisma.horse.create({
-            data: {
-              raceId: race.id,
-              name: template.name,
-              color: template.color,
-              speed: randomStat(),
-              stamina: randomStat(),
-              luck: randomStat(),
-            },
-          })
-        )
-      );
+      const horses = await prisma.horse.createManyAndReturn({
+        data: HORSE_TEMPLATES.map((template) => ({
+          raceId: race.id,
+          name: template.name,
+          color: template.color,
+          speed: randomStat(),
+          stamina: randomStat(),
+          luck: randomStat(),
+        })),
+      });
 
       // Pre-compute ratings mapping for this race
       const ratingsMap = computeGuruRatings(race.id, horses);
@@ -201,21 +196,13 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         return callback?.({ error: "หมดเวลาแทงแล้ว" });
       }
 
-      // Remove any existing bet by this user for this race (allow changing bet)
-      await prisma.bet.deleteMany({
+      // One upsert replaces the previous delete + insert pair.
+      await prisma.bet.upsert({
         where: {
-          raceId,
-          userId: socket.user.id,
+          raceId_userId: { raceId, userId: socket.user.id },
         },
-      });
-
-      // Place new bet
-      await prisma.bet.create({
-        data: {
-          raceId,
-          horseId,
-          userId: socket.user.id,
-        },
+        create: { raceId, horseId, userId: socket.user.id },
+        update: { horseId },
       });
 
       // Get bet counts per horse (don't reveal who bet on what)
@@ -231,17 +218,13 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
       }));
 
       // Get total unique bettors
-      const totalBettors = await prisma.bet.findMany({
-        where: { raceId },
-        select: { userId: true },
-        distinct: ["userId"],
-      });
+      const totalBettors = await prisma.bet.count({ where: { raceId } });
 
       // Broadcast bet counts to the room
       io.to(race.roomId).emit("horse:betUpdate", {
         raceId,
         betCounts,
-        totalBettors: totalBettors.length,
+        totalBettors,
       });
 
       callback?.({ success: true });
@@ -291,24 +274,25 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
       // Run simulation
       const result = simulateRace(race.horses);
 
-      // Send animation frames at ~100ms intervals
-      for (let i = 0; i < result.frames.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        io.to(race.roomId).emit("horse:frame", {
-          raceId,
-          frame: result.frames[i],
-          isLast: i === result.frames.length - 1,
-        });
-      }
+      // Send one compact timeline and let each browser animate it locally.
+      // Sampling every second simulation tick preserves the same duration while
+      // cutting position payload roughly in half and Socket.IO events by >99%.
+      const frameIntervalMs = 200;
+      const compactFrames = result.frames
+        .filter((_, index) => index % 2 === 1 || index === result.frames.length - 1)
+        .map((frame) =>
+          frame.horses.map((horse) => [horse.horseId, horse.distance, horse.event])
+        );
 
-      // Update race with winner
-      await prisma.horseRace.update({
-        where: { id: raceId },
-        data: {
-          winnerId: result.winner.id,
-          status: "FINISHED",
-        },
+      io.to(race.roomId).emit("horse:timeline", {
+        raceId,
+        intervalMs: frameIntervalMs,
+        frames: compactFrames,
       });
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, compactFrames.length * frameIntervalMs)
+      );
 
       // Fetch all bets for this race
       const allBets = await prisma.bet.findMany({
@@ -330,25 +314,32 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
       // Losers (Must drink): bet on horse that finished 4th or lower (ranks 4-8)
       const losers = allBets.filter((b) => rankingMap[b.horseId] > 3);
 
-      // Increment drink count for losers
-      for (const loser of losers) {
-        await prisma.drinkStat.upsert({
-          where: {
-            userId_roomId: {
+      // Commit all score/stat changes in one database transaction rather than
+      // waiting on a separate network round-trip for every player.
+      const resultWrites = [
+        prisma.horseRace.update({
+          where: { id: raceId },
+          data: { winnerId: result.winner.id, status: "FINISHED" },
+        }),
+        ...losers.map((loser) =>
+          prisma.drinkStat.upsert({
+            where: {
+              userId_roomId: {
+                userId: loser.userId,
+                roomId: race.roomId,
+              },
+            },
+            create: {
               userId: loser.userId,
               roomId: race.roomId,
+              count: 1,
             },
-          },
-          create: {
-            userId: loser.userId,
-            roomId: race.roomId,
-            count: 1,
-          },
-          update: {
-            count: { increment: 1 },
-          },
-        });
-      }
+            update: {
+              count: { increment: 1 },
+            },
+          })
+        ),
+      ];
 
       // Add points to user scores based on rankings (1st: 8 pts, 2nd: 7 pts, ... 8th: 1 pt)
       for (const bet of allBets) {
@@ -356,19 +347,23 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         const pointsToAdd = Math.max(1, 9 - horseRank);
 
         if (pointsToAdd > 0) {
-          await prisma.roomPlayer.update({
-            where: {
-              roomId_userId: {
-                roomId: race.roomId,
-                userId: bet.userId,
+          resultWrites.push(
+            prisma.roomPlayer.update({
+              where: {
+                roomId_userId: {
+                  roomId: race.roomId,
+                  userId: bet.userId,
+                },
               },
-            },
-            data: {
-              score: { increment: pointsToAdd },
-            },
-          });
+              data: {
+                score: { increment: pointsToAdd },
+              },
+            })
+          );
         }
       }
+
+      await prisma.$transaction(resultWrites);
 
       // Fetch the updated leaderboard for the room
       const leaderboard = await prisma.roomPlayer.findMany({

@@ -4,9 +4,8 @@
  * The minority side drinks — if tied, everyone drinks!
  */
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma.js";
 
-const prisma = new PrismaClient();
 
 // Pre-defined local questions for offline fallbacks
 const FALLBACK_QUESTIONS = {
@@ -58,6 +57,7 @@ async function queryOpenRouter(category) {
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -84,6 +84,8 @@ async function queryOpenRouter(category) {
             content: `ขอคำถามหมวดหมู่: ${categoryName}`
           }
         ],
+        max_tokens: 250,
+        temperature: 0.9,
         response_format: { type: "json_object" }
       })
     });

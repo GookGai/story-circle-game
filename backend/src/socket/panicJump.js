@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma.js";
 
 export default function (io, socket, connectedUsers) {
   
@@ -41,6 +39,7 @@ export default function (io, socket, connectedUsers) {
       const quota = round.quota;
       let drinkers = [];
       let survivors = [];
+      const roundWrites = [];
 
       for (let i = 0; i < allJumps.length; i++) {
         const j = allJumps[i];
@@ -70,24 +69,26 @@ export default function (io, socket, connectedUsers) {
 
         if (survived) {
           survivors.push({ ...j, reason });
-          await prisma.roomPlayer.update({
+          roundWrites.push(prisma.roomPlayer.update({
             where: { roomId_userId: { roomId, userId: j.userId } },
             data: { score: { increment: points } }
-          });
+          }));
         } else {
           drinkers.push({ ...j, reason });
-          await prisma.drinkStat.upsert({
+          roundWrites.push(prisma.drinkStat.upsert({
             where: { userId_roomId: { userId: j.userId, roomId } },
             create: { userId: j.userId, roomId, count: 1 },
             update: { count: { increment: 1 } }
-          });
+          }));
         }
         
-        await prisma.panicJumpAction.update({
+        roundWrites.push(prisma.panicJumpAction.update({
           where: { id: j.id },
           data: { survived, points }
-        });
+        }));
       }
+
+      await prisma.$transaction(roundWrites);
 
       const updatedPlayers = await prisma.roomPlayer.findMany({ 
         where: { roomId },

@@ -13,7 +13,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { PrismaClient } from "@prisma/client";
+import prisma from "./utils/prisma.js";
 
 // Route imports
 import authRoutes from "./routes/auth.js";
@@ -28,13 +28,19 @@ import { initializeSocketHandlers } from "./socket/index.js";
 
 const app = express();
 const httpServer = createServer(app);
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // ─── CORS Configuration ─────────────────────────────────────────────────────
 
+const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  // `origin: true` reflects the caller and remains compatible with credentials.
+  // A literal "*" plus credentials is rejected by browsers.
+  origin: configuredOrigins.includes("*") ? true : configuredOrigins,
   credentials: true,
 };
 

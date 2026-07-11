@@ -196,14 +196,16 @@ export default function horseRaceHandler(io, socket, connectedUsers) {
         return callback?.({ error: "หมดเวลาแทงแล้ว" });
       }
 
-      // One upsert replaces the previous delete + insert pair.
-      await prisma.bet.upsert({
-        where: {
-          raceId_userId: { raceId, userId: socket.user.id },
-        },
-        create: { raceId, horseId, userId: socket.user.id },
-        update: { horseId },
-      });
+      // Replace an earlier choice from this player before recording the new one.
+      // Keeping the existing schema avoids a production data migration here.
+      await prisma.$transaction([
+        prisma.bet.deleteMany({
+          where: { raceId, userId: socket.user.id },
+        }),
+        prisma.bet.create({
+          data: { raceId, horseId, userId: socket.user.id },
+        }),
+      ]);
 
       // Get bet counts per horse (don't reveal who bet on what)
       const bets = await prisma.bet.groupBy({

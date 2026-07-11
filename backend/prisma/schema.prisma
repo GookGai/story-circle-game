@@ -119,9 +119,6 @@ model Bet {
   horse Horse     @relation(fields: [horseId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // A player can only have one active choice per race. This lets the server
-  // update a bet in one query instead of deleting and recreating it.
-  @@unique([raceId, userId])
 }
 
 // ─── Vote Round ──────────────────────────────────────────────────────────────

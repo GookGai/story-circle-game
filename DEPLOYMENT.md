@@ -47,6 +47,8 @@ deployed database. A successful build alone does not verify multiplayer behavior
 
 ## Verified deployment (2026-10-16)
 
+This section records the original v1 deployment. See [PRODUCTION-V2.md](docs/PRODUCTION-V2.md) for the current v2 runtime, additive schema rollout, backup and verification. The previously listed three backend audit findings are resolved in v2 with a tested deepmerge-ts 8.0.0 override.
+
 - Project: `story circle` (`df48eb41-8348-416b-827d-c61b55974071`)
 - App service: `striking-sparkle`; PostgreSQL service: `Postgres`
 - Source branch: `codex/optimize-railway`

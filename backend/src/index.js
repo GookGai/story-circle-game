@@ -22,10 +22,11 @@ import prisma from "./utils/prisma.js";
 import authRoutes from "./routes/auth.js";
 import roomRoutes from "./routes/rooms.js";
 import statsRoutes from "./routes/stats.js";
-import { getAllGames } from "./utils/gameRegistry.js";
+import { GAMES } from "./party/engine.js";
+import { rateLimit } from "./middleware/rateLimit.js";
 
 // Socket handler imports
-import { initializeSocketHandlers } from "./socket/index.js";
+import { initializeParty } from "./party/service.js";
 
 // ─── Initialize ──────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required in production");
 }
 app.disable("x-powered-by");
+app.set('trust proxy', 1);
 
 // ─── CORS Configuration ─────────────────────────────────────────────────────
 
@@ -55,7 +57,9 @@ app.use(cors(corsOptions));
 
 // ─── Body Parsing ────────────────────────────────────────────────────────────
 
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
+app.use('/api/auth', rateLimit({ limit: 80, windowMs: 15 * 60 * 1000 }));
+app.use('/api/rooms', rateLimit({ limit: 240, windowMs: 60 * 1000 }));
 
 // ─── REST API Routes ─────────────────────────────────────────────────────────
 
@@ -65,7 +69,7 @@ app.use("/api/stats", statsRoutes);
 
 // Game registry endpoint — returns all available game types
 app.get("/api/games", (_req, res) => {
-  res.json({ games: getAllGames() });
+  res.json({ games: GAMES });
 });
 
 // Health check endpoint
@@ -106,7 +110,12 @@ const io = new Server(httpServer, {
 });
 
 // Initialize all socket event handlers
-initializeSocketHandlers(io);
+initializeParty(io);
+
+app.use((error, _req, res, _next) => {
+  console.error('Request failed:', error.code || error.message);
+  res.status(error.status || 500).json({ error: error.status === 413 ? 'ข้อมูลมีขนาดใหญ่เกินไป' : 'ระบบขัดข้องชั่วคราว ลองอีกครั้ง' });
+});
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 

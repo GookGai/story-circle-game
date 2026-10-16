@@ -1,0 +1,52 @@
+name: Build and multiplayer checks
+on:
+  push:
+    branches: [main, codex/optimize-railway]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: story_test
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: story_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://story_test:ci-test-only@localhost:5432/story_test
+      JWT_SECRET: ci-only-not-a-production-secret
+      PORT: '3105'
+      HOST_GRACE_MS: '1500'
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm run lint --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: npm test --prefix backend
+      - run: npm run db:push --prefix backend
+      - name: Ten-player integration checks
+        run: |
+          mkdir -p .tools
+          node backend/src/index.js > /tmp/story-circle-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3105/health/ready; then break; fi
+            sleep 1
+          done
+          node backend/scripts/smoke-party.mjs

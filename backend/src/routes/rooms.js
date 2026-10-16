@@ -1,188 +1,138 @@
-/**
- * Room management routes: create, get by code, list user's rooms
- */
-
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import prisma from "../utils/prisma.js";
 import { authenticate } from "../middleware/auth.js";
+import { GAMES, initialState, displayName } from "../party/engine.js";
+import { joinRoom } from "../party/service.js";
 
 const router = Router();
+const playerInclude = {
+  players: {
+    include: { user: { select: { id: true, username: true, avatar: true } } },
+    orderBy: { joinedAt: "asc" },
+  },
+};
+const roomView = (room) => ({
+  id: room.id,
+  code: room.code,
+  hostId: room.hostId,
+  gameType: room.runtime?.config?.gameType || room.gameType,
+  maxPlayers: Math.min(room.maxPlayers, 10),
+  status: room.status,
+  players: room.players.map((p) => ({
+    ...p,
+    user: { ...p.user, username: displayName(p.user) },
+  })),
+});
 
-/**
- * Generate a random 6-character uppercase alphanumeric room code
- */
-function generateRoomCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
+router.get("/:code/preview", async (req, res) => {
+  if (!/^[A-Z0-9]{6}$/i.test(req.params.code))
+    return res.status(400).json({ error: "รหัสวงต้องมี 6 ตัว" });
+  const room = await prisma.room.findUnique({
+    where: { code: req.params.code.toUpperCase() },
+    select: {
+      code: true,
+      status: true,
+      maxPlayers: true,
+      _count: { select: { players: true } },
+    },
+  });
+  if (!room)
+    return res.status(404).json({ error: "ไม่พบวงนี้ ตรวจรหัสอีกครั้ง" });
+  res.json({
+    code: room.code,
+    status: room.status,
+    count: room._count.players,
+    maxPlayers: Math.min(room.maxPlayers, 10),
+  });
+});
 
-// ─── POST / — Create a new room ─────────────────────────────────────────────
 router.post("/", authenticate, async (req, res) => {
-  try {
-    const { gameType, maxPlayers, settings } = req.body;
-
-    if (!gameType) {
-      return res.status(400).json({ error: "กรุณาเลือกประเภทเกม" });
-    }
-
-    // Generate unique room code (retry if collision)
-    let code;
-    let exists = true;
-    while (exists) {
-      code = generateRoomCode();
-      exists = !!(await prisma.room.findUnique({ where: { code } }));
-    }
-
-    // Create room and add host as first player in a transaction
-    const room = await prisma.$transaction(async (tx) => {
-      const newRoom = await tx.room.create({
+  const gameType = req.body.gameType || "MIXED";
+  const totalRounds = req.body.settings?.totalRounds || 6;
+  if (
+    !GAMES.some((g) => g.type === gameType) ||
+    ![3, 6, 9].includes(totalRounds)
+  )
+    return res.status(400).json({ error: "การตั้งค่าวงไม่ถูกต้อง" });
+  if (
+    req.body.maxPlayers !== undefined &&
+    (!Number.isInteger(req.body.maxPlayers) ||
+      req.body.maxPlayers < 2 ||
+      req.body.maxPlayers > 10)
+  )
+    return res.status(400).json({ error: "วงรองรับ 2–10 คน" });
+  const count = await prisma.room.count({
+    where: { hostId: req.user.id, status: { not: "FINISHED" } },
+  });
+  if (count >= 5)
+    return res
+      .status(429)
+      .json({ error: "คุณมีวงเปิดอยู่แล้ว 5 วง กลับไปเล่นวงเดิมก่อน" });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { id: true, username: true, avatar: true },
+      });
+      if (!user)
+        return res.status(401).json({ error: "กรุณาตั้งชื่อเล่นอีกครั้ง" });
+      const runtime = initialState();
+      runtime.config.gameType = gameType;
+      runtime.config.totalRounds = totalRounds;
+      runtime.profiles[user.id] = { ...user, username: displayName(user) };
+      runtime.ready = [user.id];
+      const code = randomBytes(5).toString("hex").slice(0, 6).toUpperCase();
+      const room = await prisma.room.create({
         data: {
           code,
-          hostId: req.user.id,
+          hostId: user.id,
           gameType,
-          maxPlayers: maxPlayers || 15,
-          settings: settings || {},
+          maxPlayers: req.body.maxPlayers || 10,
+          runtime,
+          players: { create: { userId: user.id } },
         },
+        include: playerInclude,
       });
-
-      // Add the host as the first player
-      await tx.roomPlayer.create({
-        data: {
-          roomId: newRoom.id,
-          userId: req.user.id,
-        },
-      });
-
-      return newRoom;
-    });
-
-    // Fetch room with players for response
-    const roomWithPlayers = await prisma.room.findUnique({
-      where: { id: room.id },
-      include: {
-        players: {
-          include: {
-            user: { select: { id: true, username: true, avatar: true } },
-          },
-        },
-        host: { select: { id: true, username: true, avatar: true } },
-      },
-    });
-
-    res.status(201).json({ room: roomWithPlayers });
-  } catch (error) {
-    console.error("Create room error:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการสร้างห้อง" });
+      return res.status(201).json({ room: roomView(room) });
+    } catch (error) {
+      if (error.code === "P2002") continue;
+      throw error;
+    }
   }
+  return res.status(503).json({ error: "เปิดวงไม่สำเร็จ ลองอีกครั้ง" });
 });
 
-// ─── GET /my/rooms — Get rooms the current user is in ────────────────────────
-// NOTE: This route MUST be defined before /:code to avoid "my" being treated as a code
 router.get("/my/rooms", authenticate, async (req, res) => {
-  try {
-    const rooms = await prisma.room.findMany({
-      where: {
-        players: {
-          some: { userId: req.user.id },
-        },
-      },
-      include: {
-        players: {
-          include: {
-            user: { select: { id: true, username: true, avatar: true } },
-          },
-        },
-        host: { select: { id: true, username: true, avatar: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    res.json({ rooms });
-  } catch (error) {
-    console.error("Get my rooms error:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลห้อง" });
-  }
+  const rooms = await prisma.room.findMany({
+    where: { players: { some: { userId: req.user.id } } },
+    include: playerInclude,
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+  res.json({ rooms: rooms.map(roomView) });
 });
 
-// ─── POST /:code/join — Join a room by its code ─────────────────────────────────
 router.post("/:code/join", authenticate, async (req, res) => {
   try {
-    const { code } = req.params;
-
-    const room = await prisma.room.findUnique({
-      where: { code: code.toUpperCase() },
-      include: { players: true },
-    });
-
-    if (!room) {
-      return res.status(404).json({ error: "ไม่พบห้องนี้" });
-    }
-
-    if (room.status === "FINISHED") {
-      return res.status(400).json({ error: "ห้องนี้จบเกมแล้ว" });
-    }
-
-    // Check max players
-    if (room.players.length >= room.maxPlayers) {
-      const alreadyInRoom = room.players.some((p) => p.userId === req.user.id);
-      if (!alreadyInRoom) {
-        return res.status(400).json({ error: "ห้องเต็มแล้ว" });
-      }
-    }
-
-    // Add player to room (upsert to handle rejoin seamlessly)
-    await prisma.roomPlayer.upsert({
-      where: {
-        roomId_userId: {
-          roomId: room.id,
-          userId: req.user.id,
-        },
-      },
-      create: {
-        roomId: room.id,
-        userId: req.user.id,
-      },
-      update: {}, // No-op if already exists
-    });
-
-    res.json({ success: true, room });
+    const room = await joinRoom(req.params.code, req.user.id);
+    res.json({ success: true, room: roomView(room) });
   } catch (error) {
-    console.error("Join room error:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการเข้าร่วมห้อง" });
+    res
+      .status(error.code === "ROOM_NOT_FOUND" ? 404 : 400)
+      .json({ error: error.message });
   }
 });
 
-// ─── GET /:code — Get a room by its code ─────────────────────────────────────
 router.get("/:code", authenticate, async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    const room = await prisma.room.findUnique({
-      where: { code: code.toUpperCase() },
-      include: {
-        players: {
-          include: {
-            user: { select: { id: true, username: true, avatar: true } },
-          },
-          orderBy: { joinedAt: "asc" },
-        },
-        host: { select: { id: true, username: true, avatar: true } },
-      },
-    });
-
-    if (!room) {
-      return res.status(404).json({ error: "ไม่พบห้องนี้" });
-    }
-
-    res.json({ room });
-  } catch (error) {
-    console.error("Get room error:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงข้อมูลห้อง" });
-  }
+  const room = await prisma.room.findUnique({
+    where: { code: req.params.code.toUpperCase() },
+    include: playerInclude,
+  });
+  if (!room) return res.status(404).json({ error: "ไม่พบวงนี้" });
+  if (!room.players.some((p) => p.userId === req.user.id))
+    return res.status(403).json({ error: "เข้าร่วมวงก่อนดูรายละเอียด" });
+  res.json({ room: roomView(room) });
 });
 
 export default router;

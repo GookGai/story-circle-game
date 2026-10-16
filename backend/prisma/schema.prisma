@@ -25,6 +25,7 @@ model User {
   username     String        @unique
   password     String
   avatar       String        @default("cat")
+  isGuest      Boolean       @default(false)
   createdAt    DateTime      @default(now())
 
   // Relations
@@ -48,6 +49,8 @@ model Room {
   settings   Json?
   status     RoomStatus @default(WAITING)
   createdAt  DateTime   @default(now())
+  runtime    Json?
+  revision   Int        @default(0)
 
   // Relations
   host           User            @relation("HostedRooms", fields: [hostId], references: [id])

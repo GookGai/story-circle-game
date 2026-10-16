@@ -1,10 +1,10 @@
-import { createContext, useEffect, useState, useRef } from 'react';
-import { io } from 'socket.io-client';
-import { useAuth } from '../hooks/useAuth';
+import { useEffect, useState, useRef } from "react";
+import { io } from "socket.io-client";
+import { useAuth } from "../hooks/useAuth";
 
 const API_URL = import.meta.env.VITE_API_URL || undefined;
 
-export const SocketContext = createContext(null);
+import { SocketContext } from "./contexts";
 
 export function SocketProvider({ children }) {
   const { user, token } = useAuth();
@@ -28,25 +28,25 @@ export function SocketProvider({ children }) {
     // Create new socket connection
     const newSocket = io(API_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
 
-    newSocket.on('connect', () => {
-      console.log('🔌 Socket connected:', newSocket.id);
+    newSocket.on("connect", () => {
+      console.log("🔌 Socket connected:", newSocket.id);
       setConnected(true);
     });
 
-    newSocket.on('disconnect', (reason) => {
-      console.log('🔌 Socket disconnected:', reason);
+    newSocket.on("disconnect", (reason) => {
+      console.log("🔌 Socket disconnected:", reason);
       setConnected(false);
     });
 
-    newSocket.on('connect_error', (err) => {
-      console.error('🔌 Socket connection error:', err.message);
+    newSocket.on("connect_error", (err) => {
+      console.error("🔌 Socket connection error:", err.message);
     });
 
     socketRef.current = newSocket;

@@ -18,8 +18,8 @@ No `VITE_API_URL` is needed for the combined service. For separate hosting it is
 a build-time variable. Local Vite development proxies API and socket requests.
 
 For a new Railway service configure the Dockerfile builder, pre-deploy command
-`cd /app/backend && npm run db:push`, healthcheck path `/health/ready`, one replica,
-and restart-on-failure with five retries in Railway Settings. New services cannot
+`npm run db:push` (the image working directory is `/app/backend`), healthcheck path `/health/ready`, one replica,
+and restart-on-failure in Railway Settings. New services cannot
 use the deprecated `railway.json` format. This repository has no migration baseline.
 `db push` does not accept data loss automatically. Introduce reviewed migrations
 before making destructive schema changes to a populated database.
@@ -44,3 +44,17 @@ Checks: `npm ci --prefix frontend`, `npm ci --prefix backend`,
 Before calling a deployment verified, exercise registration, guest joining,
 all three games with multiple clients, reconnect, and room cleanup against the
 deployed database. A successful build alone does not verify multiplayer behavior.
+
+## Verified deployment (2026-10-16)
+
+- Project: `story circle` (`df48eb41-8348-416b-827d-c61b55974071`)
+- App service: `striking-sparkle`; PostgreSQL service: `Postgres`
+- Source branch: `codex/optimize-railway`
+- URL: https://striking-sparkle-production-adf7.up.railway.app
+- Public domain target port: `8080` (Railway's injected `PORT`)
+- Three-client checks passed for horse race, minority vote, offline questions,
+  Panic Jump public user fields, and reconnect. QA guests leave the room afterward.
+- Frontend audit: zero findings. Backend retains three high-severity findings
+  in the Prisma CLI / `@prisma/config` / `deepmerge-ts` dependency chain; upgrading
+  across Prisma major versions requires separate compatibility validation.
+- Actual monthly cost and behavior under sustained load have not been measured.

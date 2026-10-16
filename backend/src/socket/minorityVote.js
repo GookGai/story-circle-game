@@ -5,6 +5,11 @@
  */
 
 import prisma from "../utils/prisma.js";
+import { createAIBudget } from "../utils/aiBudget.js";
+
+const aiBudget = createAIBudget({
+  dailyLimit: Math.max(0, Number(process.env.AI_DAILY_REQUEST_LIMIT ?? 100) || 0),
+});
 
 
 // Pre-defined local questions for offline fallbacks
@@ -36,7 +41,7 @@ const FALLBACK_QUESTIONS = {
 };
 
 // Request question from OpenRouter or return null on failure
-async function queryOpenRouter(category) {
+async function queryOpenRouter(category, userId) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     console.log("⚠️ OPENROUTER_API_KEY not found in env. Using offline fallback.");
@@ -53,6 +58,8 @@ async function queryOpenRouter(category) {
   };
 
   const categoryName = catMap[category] || "ทั่วไป";
+  const release = aiBudget.acquire(userId);
+  if (!release) return null;
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -65,7 +72,7 @@ async function queryOpenRouter(category) {
         "X-Title": "Story Circle"
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
@@ -98,14 +105,16 @@ async function queryOpenRouter(category) {
     const content = data.choices?.[0]?.message?.content;
     if (content) {
       const parsed = JSON.parse(content.trim());
-      if (parsed.question && parsed.optionA && parsed.optionB) {
-        return parsed;
+      if ([parsed.question, parsed.optionA, parsed.optionB].every(value => typeof value === "string" && value.trim() && value.length <= 500)) {
+        return { question: parsed.question, optionA: parsed.optionA, optionB: parsed.optionB };
       }
     }
     return null;
   } catch (err) {
     console.error("❌ OpenRouter API call failed:", err.message);
     return null;
+  } finally {
+    release();
   }
 }
 
@@ -458,7 +467,7 @@ export default function minorityVoteHandler(io, socket, connectedUsers) {
   socket.on("vote:generateAIQuestion", async ({ category }, callback) => {
     try {
       console.log(`🤖 AI Question requested for category: ${category}`);
-      let q = await queryOpenRouter(category);
+      let q = await queryOpenRouter(category, socket.user.id);
       if (!q) {
         console.log(`⚠️ AI generation failed or API key missing. Using offline fallback.`);
         q = getOfflineQuestion(category);

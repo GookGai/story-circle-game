@@ -13,6 +13,9 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import prisma from "./utils/prisma.js";
 
 // Route imports
@@ -29,6 +32,10 @@ import { initializeSocketHandlers } from "./socket/index.js";
 const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is required in production");
+}
+app.disable("x-powered-by");
 
 // ─── CORS Configuration ─────────────────────────────────────────────────────
 
@@ -70,6 +77,28 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/health/ready", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ready" });
+  } catch {
+    res.status(503).json({ status: "unavailable" });
+  }
+});
+
+// Serve the Vite build from the same process and origin as API and sockets.
+const frontendDir = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
+if (existsSync(path.join(frontendDir, "index.html"))) {
+  app.use("/assets", express.static(path.join(frontendDir, "assets"), {
+    maxAge: "1y", immutable: true,
+  }));
+  app.use(express.static(frontendDir, { maxAge: 0 }));
+  app.get("/{*path}", (req, res, next) => {
+    if (req.path.startsWith("/api/") || req.path.startsWith("/health/") || path.extname(req.path)) return next();
+    res.sendFile(path.join(frontendDir, "index.html"));
+  });
+}
+
 // ─── Socket.IO Setup ─────────────────────────────────────────────────────────
 
 const io = new Server(httpServer, {
@@ -96,20 +125,19 @@ httpServer.listen(PORT, "0.0.0.0", () => {
 
 // ─── Graceful Shutdown ───────────────────────────────────────────────────────
 
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM received. Shutting down gracefully...");
-  await prisma.$disconnect();
-  httpServer.close(() => {
+let shuttingDown = false;
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  const deadline = setTimeout(() => process.exit(1), 10000);
+  deadline.unref();
+  io.close(async () => {
+    await prisma.$disconnect();
+    clearTimeout(deadline);
     process.exit(0);
   });
-});
-
-process.on("SIGINT", async () => {
-  console.log("SIGINT received. Shutting down gracefully...");
-  await prisma.$disconnect();
-  httpServer.close(() => {
-    process.exit(0);
-  });
-});
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 export { app, httpServer, io };

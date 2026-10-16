@@ -14,6 +14,7 @@ import prisma from "../utils/prisma.js";
 // Track connected users: userId -> socketId
 const connectedUsers = new Map();
 const activeUserSockets = new Map();
+const cleanupTimers = new Map();
 const DISCONNECT_GRACE_MS = Number(process.env.DISCONNECT_GRACE_MS) || 5 * 60 * 1000;
 
 /**
@@ -26,6 +27,8 @@ export function initializeSocketHandlers(io) {
 
   io.on("connection", (socket) => {
     const { id: userId, username } = socket.user;
+    clearTimeout(cleanupTimers.get(userId));
+    cleanupTimers.delete(userId);
 
     console.log(`🔌 User connected: ${username} (${userId})`);
 
@@ -73,9 +76,12 @@ export function initializeSocketHandlers(io) {
       }
 
       // Allow mobile clients to reconnect, then clear abandoned room rows.
+      if (activeUserSockets.has(userId)) return;
+      clearTimeout(cleanupTimers.get(userId));
       const cleanupTimer = setTimeout(async () => {
+        cleanupTimers.delete(userId);
         if (activeUserSockets.has(userId)) return;
-
+        try {
         for (const roomId of joinedRoomIds) {
           await prisma.roomPlayer.deleteMany({ where: { roomId, userId } });
 
@@ -89,7 +95,11 @@ export function initializeSocketHandlers(io) {
           io.to(roomId).emit("room:playerList", players);
           await cleanupRoomAndGuests(roomId);
         }
+        } catch (error) {
+          console.error("Disconnected player cleanup failed:", error.message);
+        }
       }, DISCONNECT_GRACE_MS);
+      cleanupTimers.set(userId, cleanupTimer);
       cleanupTimer.unref?.();
     });
 

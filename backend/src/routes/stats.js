@@ -20,20 +20,12 @@ router.get("/", authenticate, async (req, res) => {
     });
 
     // Fetch user details for each aggregated stat
-    const players = await Promise.all(
-      drinkStats.map(async (stat) => {
-        const user = await prisma.user.findUnique({
-          where: { id: stat.userId },
-          select: { id: true, username: true, avatar: true },
-        });
-        return {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar,
-          drinkCount: stat._sum.count || 0,
-        };
-      })
-    );
+    const users = await prisma.user.findMany({
+      where: { id: { in: drinkStats.map(stat => stat.userId) } },
+      select: { id: true, username: true, avatar: true },
+    });
+    const totals = new Map(drinkStats.map(stat => [stat.userId, stat._sum.count || 0]));
+    const players = users.map(user => ({ ...user, drinkCount: totals.get(user.id) || 0 }));
 
     res.json({ players });
   } catch (error) {

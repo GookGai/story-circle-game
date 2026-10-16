@@ -9,7 +9,7 @@ export default function (io, socket, connectedUsers) {
 
       await prisma.panicJumpRound.update({ where: { id: roundId }, data: { status: "REVEALED" } });
 
-      const players = await prisma.roomPlayer.findMany({ where: { roomId }, include: { user: true } });
+      const players = await prisma.roomPlayer.findMany({ where: { roomId }, include: { user: { select: { id: true, username: true, avatar: true } } } });
       const jumpedUserIds = round.jumps.map(j => j.userId);
       const unjumpedUsers = players.filter(p => !jumpedUserIds.includes(p.userId));
 
@@ -33,7 +33,7 @@ export default function (io, socket, connectedUsers) {
       const allJumps = await prisma.panicJumpAction.findMany({ 
         where: { roundId: round.id },
         orderBy: { jumpOrder: 'asc' },
-        include: { user: true }
+        include: { user: { select: { id: true, username: true, avatar: true } } }
       });
 
       const quota = round.quota;
@@ -92,7 +92,7 @@ export default function (io, socket, connectedUsers) {
 
       const updatedPlayers = await prisma.roomPlayer.findMany({ 
         where: { roomId },
-        include: { user: true },
+        include: { user: { select: { id: true, username: true, avatar: true } } },
         orderBy: { score: 'desc' }
       });
 
@@ -114,7 +114,7 @@ export default function (io, socket, connectedUsers) {
 
   socket.on("jump:start", async (roomId, callback) => {
     try {
-      const room = await prisma.room.findUnique({ where: { id: roomId }, include: { players: { include: { user: true } } } });
+      const room = await prisma.room.findUnique({ where: { id: roomId }, include: { players: { include: { user: { select: { id: true, username: true, avatar: true } } } } } });
       if (!room) return callback?.({ error: "ไม่พบห้อง" });
       
       const players = room.players;
@@ -252,7 +252,7 @@ export default function (io, socket, connectedUsers) {
     try {
       const players = await prisma.roomPlayer.findMany({ 
         where: { roomId },
-        include: { user: true },
+        include: { user: { select: { id: true, username: true, avatar: true } } },
         orderBy: { score: 'asc' }
       });
 

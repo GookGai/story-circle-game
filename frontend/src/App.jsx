@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
@@ -6,10 +7,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Lobby from './pages/Lobby';
 import Room from './pages/Room';
-import HorseRace from './pages/HorseRace';
-import MinorityVote from './pages/MinorityVote';
-import PanicJump from './pages/PanicJump';
-import Stats from './pages/Stats';
+const HorseRace = lazy(() => import('./pages/HorseRace'));
+const MinorityVote = lazy(() => import('./pages/MinorityVote'));
+const PanicJump = lazy(() => import('./pages/PanicJump'));
+const Stats = lazy(() => import('./pages/Stats'));
 import JoinRoom from './pages/JoinRoom';
 import pkg from '../package.json';
 
@@ -45,6 +46,7 @@ export default function App() {
 
   return (
     <>
+      <Suspense fallback={<div className="spinner lg" role="status" aria-label="กำลังโหลด" />}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -100,6 +102,7 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
 
       {!isLanding && <Navbar />}
 

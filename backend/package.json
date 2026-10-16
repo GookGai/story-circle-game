@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "npx prisma db push && node src/index.js",
+    "start": "node src/index.js",
+    "test": "node --test",
     "db:migrate": "npx prisma migrate deploy",
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate",

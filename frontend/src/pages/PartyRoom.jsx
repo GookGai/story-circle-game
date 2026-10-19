@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { useAuth } from "../hooks/useAuth";
@@ -7,6 +7,10 @@ import { api } from "../utils/api";
 import { getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
 import { HorseInput, Race, HorseResults } from "../components/HorseGame";
+
+import { ReadyDock, ReadyRollCall } from "../components/ReadyControls";
+import RoomConfirmation from "../components/RoomConfirmation";
+import { readiness, playerStatus } from "../utils/readiness";
 
 const gameLabels = {
   HORSE_RACE: ["แข่งม้า", "horse"],
@@ -207,20 +211,13 @@ function Players({ members, hostId, state, userId }) {
                 {member.username} {member.id === userId && <small>(คุณ)</small>}
               </strong>
               <span>
-                {member.id === hostId
-                  ? "เจ้าวง"
-                  : state.sittingOut.includes(member.id)
-                    ? "พักตานี้"
-                    : !member.online
-                      ? "รอกลับมา"
-                      : state.ready.includes(member.id)
-                        ? "พร้อมแล้ว"
-                        : "อยู่ในวง"}
+                {member.id === hostId ? "เจ้าวง · " : ""}
+                {playerStatus(member, state, hostId)}
               </span>
             </div>
             {member.id === hostId ? (
               <Icon name="crown" size={18} />
-            ) : state.ready.includes(member.id) && member.online ? (
+            ) : playerStatus(member, state, hostId) === "พร้อมแล้ว" ? (
               <Icon name="check" size={18} />
             ) : null}
           </div>
@@ -544,6 +541,7 @@ export default function PartyRoom() {
     command,
     connected,
     pending,
+    pendingCommand,
     error,
     setError,
     sync,
@@ -553,6 +551,9 @@ export default function PartyRoom() {
   const [games, setGames] = useState([]);
   const [now, setNow] = useState(Date.now());
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [roomAction, setRoomAction] = useState(null);
+  const cancelRoomAction = useCallback(() => setRoomAction(null), []);
+  const cancelLeave = useCallback(() => setConfirmLeave(false), []);
   useEffect(() => {
     api
       .get("/api/games")
@@ -595,19 +596,24 @@ export default function PartyRoom() {
     round?.mode === "MATCH" && currentType === "MINORITY_VOTE"
       ? "ใจตรงกัน"
       : gameLabels[currentType]?.[0];
-  const ready = state.ready.includes(user.id);
-  const sittingOut = state.sittingOut.includes(user.id);
-  const onlinePlayers = members.filter(
-    (m) => m.online && !state.sittingOut.includes(m.id),
-  );
-  const allReady = onlinePlayers.every(
-    (m) => state.ready.includes(m.id) || m.id === room.hostId,
-  );
-  const minimum = state.config.gameType === "PANIC_JUMP" ? 3 : 2;
+  const model = readiness({
+    state,
+    members,
+    hostId: room.hostId,
+    userId: user.id,
+  });
   const lastRound = state.roundNumber >= state.config.totalRounds;
+  const nextLabel =
+    phase === "LOBBY"
+      ? `เริ่มด้วย: ${gameLabels[state.config.gameType]?.[0]} · ${state.config.totalRounds} ตา`
+      : `ตาถัดไป ${state.roundNumber + 1}/${state.config.totalRounds} · ${gameLabels[state.config.gameType]?.[0]}`;
+  const actionIsCurrent =
+    roomAction &&
+    roomAction.phase === phase &&
+    roomAction.roundId === round?.id;
 
   return (
-    <div className="party-workspace">
+    <div className={`party-workspace ${between ? "has-action-dock" : ""}`}>
       <header className="room-nav">
         <Link to="/" className="wordmark">
           <span className="brand-symbol">
@@ -687,6 +693,14 @@ export default function PartyRoom() {
           </div>
           <div className={`room-layout ${active ? "is-playing" : ""}`}>
             <main className="room-main">
+              {phase === "LOBBY" && (
+                <ReadyRollCall
+                  model={model}
+                  nextLabel={nextLabel}
+                  hostId={room.hostId}
+                  userId={user.id}
+                />
+              )}
               {phase === "LOBBY" && (
                 <>
                   <details className="mobile-invite">
@@ -833,6 +847,12 @@ export default function PartyRoom() {
               {phase === "RESULTS" && (
                 <>
                   <Results state={state} userId={user.id} />
+                  <ReadyRollCall
+                    model={model}
+                    nextLabel={nextLabel}
+                    hostId={room.hostId}
+                    userId={user.id}
+                  />
                   {host && !lastRound && (
                     <details className="next-game-settings">
                       <summary>เปลี่ยนเกมหรือคำถามตาถัดไป</summary>
@@ -845,69 +865,6 @@ export default function PartyRoom() {
                     </details>
                   )}
                 </>
-              )}
-              {between && (
-                <div className="ready-dock">
-                  <div className="ready-status">
-                    <span className="live-dot" />
-                    <p>
-                      {lastRound && phase === "RESULTS"
-                        ? "ครบวงแล้ว เก็บเรื่องของคืนนี้ไว้กัน"
-                        : onlinePlayers.length < minimum
-                          ? `รอเพื่อนพร้อมอีก ${minimum - onlinePlayers.length} คน`
-                          : allReady
-                            ? "ทุกคนพร้อม เริ่มได้เลย"
-                            : "รอเพื่อนกดพร้อม หรือเลือกพักตานี้"}
-                    </p>
-                  </div>
-                  {!(lastRound && phase === "RESULTS") && (
-                    <div className="personal-ready">
-                      <button
-                        className={`p-button ${ready ? "ready-confirmed" : "outline"}`}
-                        disabled={disabled}
-                        onClick={() => command("READY", { ready: true })}
-                      >
-                        <Icon name="check" size={18} />
-                        {ready ? "คุณพร้อมแล้ว" : "พร้อมเล่น"}
-                      </button>
-                      <button
-                        className={`text-button ${sittingOut ? "accent" : ""}`}
-                        disabled={disabled}
-                        onClick={() => command("READY", { ready: false })}
-                      >
-                        {sittingOut ? "คุณพักตานี้" : "พักตานี้"}
-                      </button>
-                    </div>
-                  )}
-                  {host ? (
-                    <button
-                      className="p-button primary full"
-                      disabled={
-                        disabled ||
-                        (!(lastRound && phase === "RESULTS") &&
-                          (!allReady || onlinePlayers.length < minimum))
-                      }
-                      onClick={() =>
-                        command(phase === "LOBBY" ? "START" : "NEXT")
-                      }
-                    >
-                      {pending
-                        ? "รอสักครู่…"
-                        : phase === "LOBBY"
-                          ? "คนพร้อมแล้ว เริ่มเลย"
-                          : lastRound
-                            ? "ดูเรื่องของคืนนี้"
-                            : "ไปตาถัดไป"}
-                      <Icon name="arrow" size={20} />
-                    </button>
-                  ) : (
-                    <p className="waiting-host">
-                      {lastRound
-                        ? "รอเจ้าวงเปิดสรุปคืนนี้"
-                        : "เจ้าวงจะพาทุกคนเริ่มพร้อมกัน"}
-                    </p>
-                  )}
-                </div>
               )}
               {host && phase !== "PAUSED" && (
                 <div className="host-controls">
@@ -925,7 +882,13 @@ export default function PartyRoom() {
                     <button
                       className="text-button"
                       disabled={disabled}
-                      onClick={() => command("SKIP")}
+                      onClick={() =>
+                        setRoomAction({
+                          type: "SKIP",
+                          roundId: round.id,
+                          phase,
+                        })
+                      }
                     >
                       ข้ามรอบนี้ · ไม่คิดคะแนน
                     </button>
@@ -933,7 +896,9 @@ export default function PartyRoom() {
                   <button
                     className="text-button"
                     disabled={disabled}
-                    onClick={() => command("END")}
+                    onClick={() =>
+                      setRoomAction({ type: "END", roundId: round?.id, phase })
+                    }
                   >
                     จบวงและดูสรุป
                   </button>
@@ -969,32 +934,55 @@ export default function PartyRoom() {
         </span>
         <span>เล่นในแบบที่ทุกคนสบายใจ · ข้ามได้เสมอ</span>
       </footer>
+      {between && (
+        <ReadyDock
+          model={model}
+          host={host}
+          phase={phase}
+          disabled={disabled}
+          connected={connected}
+          pendingCommand={pendingCommand}
+          command={command}
+          nextLabel={nextLabel}
+        />
+      )}
+      {actionIsCurrent && (
+        <RoomConfirmation
+          title={roomAction.type === "SKIP" ? "ข้ามรอบนี้?" : "จบวงตอนนี้?"}
+          description={
+            roomAction.type === "SKIP"
+              ? "รอบนี้จะไม่คิดคะแนน ทุกคนจะไปหน้าผลและเตรียมตาถัดไปได้"
+              : active
+                ? "รอบที่กำลังเล่นจะไม่คิดคะแนน และทุกคนจะไปหน้าสรุปคืนนี้"
+                : "ทุกคนจะไปหน้าสรุปคะแนนและโมเมนต์ของคืนนี้"
+          }
+          actionLabel={
+            roomAction.type === "SKIP" ? "ยืนยันข้ามรอบ" : "ยืนยันจบวง"
+          }
+          disabled={disabled}
+          busy={pendingCommand === roomAction.type}
+          onCancel={cancelRoomAction}
+          onConfirm={async () => {
+            const ok = await command(roomAction.type, {
+              roundId: roomAction.roundId,
+            });
+            if (ok) setRoomAction(null);
+          }}
+        />
+      )}
       {confirmLeave && (
-        <div className="party-modal-backdrop">
-          <section
-            className="party-modal leave-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="leave-title"
-          >
-            <Icon name="exit" size={35} />
-            <h2 id="leave-title">ออกจากวงนี้?</h2>
-            <p>
-              {host
-                ? "เพื่อนที่อยู่ในวงจะเป็นเจ้าวงต่อ คุณกลับมาเข้ารหัสเดิมได้"
-                : "รอบนี้จะเล่นต่อได้ เพื่อนยังอยู่ในวงเหมือนเดิม"}
-            </p>
-            <button className="p-button primary full" onClick={leave}>
-              ออกจากวง
-            </button>
-            <button
-              className="p-button outline full"
-              onClick={() => setConfirmLeave(false)}
-            >
-              อยู่เล่นต่อ
-            </button>
-          </section>
-        </div>
+        <RoomConfirmation
+          title="ออกจากวงนี้?"
+          description={
+            host
+              ? "เพื่อนที่อยู่ในวงจะเป็นเจ้าวงต่อ คุณกลับมาเข้ารหัสเดิมได้"
+              : "เพื่อนจะเล่นต่อได้ คุณกลับมาเข้ารหัสเดิมได้"
+          }
+          actionLabel="ออกจากวง"
+          disabled={false}
+          onCancel={cancelLeave}
+          onConfirm={leave}
+        />
       )}
     </div>
   );

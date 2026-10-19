@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "./useSocket";
+import { canRetryStart } from "../utils/commandRetry";
 
 export function useParty(code) {
   const { socket, connected } = useSocket();
   const [snapshot, setSnapshot] = useState(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [pendingCommand, setPendingCommand] = useState(null);
   const [offset, setOffset] = useState(0);
   const latest = useRef(null);
   const busy = useRef(false);
@@ -69,33 +71,59 @@ export function useParty(code) {
       if (!socket?.connected || busy.current || !latest.current) return;
       busy.current = true;
       setPending(true);
+      setPendingCommand(type);
       setError("");
       return new Promise((resolve) => {
-        socket.timeout(10000).emit(
-          "party:command",
-          {
-            code,
-            type,
-            commandId: crypto.randomUUID(),
-            expectedRevision: latest.current.room.revision,
-            roundId: latest.current.state.round?.id,
-            ...payload,
-          },
-          (err, reply) => {
-            busy.current = false;
-            setPending(false);
-            if (err || !reply?.ok) {
-              setError(
-                reply?.error || "ยังไม่ยืนยันคำสั่ง กำลังตรวจสถานะล่าสุด",
-              );
-              sync(false);
-              resolve(false);
-              return;
-            }
-            accept(reply.snapshot);
-            resolve(true);
-          },
-        );
+        const before = latest.current;
+        const envelope = {
+          code,
+          type,
+          commandId: crypto.randomUUID(),
+          expectedRevision: latest.current.room.revision,
+          roundId: latest.current.state.round?.id,
+          ...payload,
+        };
+        const finish = (err, reply) => {
+          busy.current = false;
+          setPending(false);
+          setPendingCommand(null);
+          if (err || !reply?.ok) {
+            setError(reply?.error || "ยังไม่ยืนยันคำสั่ง กำลังตรวจสถานะล่าสุด");
+            sync(false);
+            resolve(false);
+            return;
+          }
+          accept(reply.snapshot);
+          resolve(true);
+        };
+        const send = (retried = false) =>
+          socket
+            .timeout(10000)
+            .emit("party:command", envelope, (err, reply) => {
+              if (
+                !err &&
+                reply?.code === "STALE_STATE" &&
+                !retried &&
+                canRetryStart(type, before, latest.current)
+              ) {
+                socket
+                  .timeout(10000)
+                  .emit("party:sync", code, (syncError, synced) => {
+                    if (syncError || !synced?.ok) {
+                      finish(syncError, synced);
+                      return;
+                    }
+                    accept(synced.snapshot);
+                    if (!canRetryStart(type, before, latest.current)) {
+                      finish(null, reply);
+                      return;
+                    }
+                    envelope.expectedRevision = latest.current.room.revision;
+                    send(true);
+                  });
+              } else finish(err, reply);
+            });
+        send();
       });
     },
     [socket, code, accept, sync],
@@ -116,6 +144,7 @@ export function useParty(code) {
     command,
     connected,
     pending,
+    pendingCommand,
     error,
     setError,
     sync,

@@ -8,6 +8,7 @@ import "./index.css";
 import "./party.css";
 import "./mobile.css";
 import "./horse.css";
+import "./ready.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

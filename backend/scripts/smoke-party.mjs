@@ -73,7 +73,11 @@ async function connect(user, code) {
   });
   const reply = await emit(socket, "party:sync", code);
   assert.ok(reply.ok, reply.error);
-  client.state = reply.snapshot;
+  if (
+    !client.state ||
+    reply.snapshot.room.revision >= client.state.room.revision
+  )
+    client.state = reply.snapshot;
   return client;
 }
 async function command(client, type, payload = {}, requireSuccess = true) {
@@ -198,6 +202,11 @@ try {
   await Promise.all(
     clients.map((c, i) => command(c, "CHOOSE", { choice: (i % 8) + 1 })),
   );
+  // A command acknowledgement to another player can arrive before its broadcast
+  // reaches the host. Wait for the host's actual snapshot before closing input.
+  await waitUntil(() => host.state.state.round.submitted === count);
+  assert.equal(host.state.state.round.gurus.length, 3);
+  assert.equal(host.state.state.round.picks.length, count);
   await command(host, "CLOSE_INPUT");
   const raceId = host.state.state.round.id;
   const racing = await emit(clients[1].socket, "party:sync", code);
@@ -205,6 +214,11 @@ try {
   assert.equal(racing.snapshot.state.round.id, raceId);
   assert.ok(racing.snapshot.state.round.frames.length);
   await results(clients);
+  assert.ok(
+    host.state.state.round.result.players.every(
+      (p) => p.mustDrink === p.rank > 3 && p.drinks === (p.rank > 3 ? 1 : 0),
+    ),
+  );
   assert.ok(
     host.state.state.round.result.players.every(
       (p) => p.points >= 1 && p.points <= 8,

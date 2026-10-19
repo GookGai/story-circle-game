@@ -7,6 +7,47 @@ import {
   projectState,
 } from "../src/party/engine.js";
 import { QUESTIONS, pickQuestion } from "../src/party/questions.js";
+import { makeHorseField, makeGurus } from "../src/party/horseField.js";
+
+test("eight distinct horse identities and three stable, opinionated gurus", () => {
+  const horses = makeHorseField(() => 0.5);
+  for (const field of ["name", "style", "color", "ability"])
+    assert.equal(new Set(horses.map((h) => h[field])).size, 8);
+  const gurus = makeGurus("round-proof", horses);
+  assert.deepEqual(makeGurus("round-proof", horses), gurus);
+  assert.equal(new Set(gurus.map((g) => g.pickId)).size, 3);
+  for (const g of gurus) {
+    assert.notEqual(g.pickId, g.avoidId);
+    assert.equal(g.ratings[g.pickId], 5);
+    assert.equal(g.ratings[g.avoidId], 1);
+    assert.ok(Object.values(g.ratings).every((n) => n >= 1 && n <= 5));
+  }
+});
+
+test("horse results name every drinker, keep missing players neutral, and persist picks", () => {
+  const t = setup(10, "HORSE_RACE");
+  for (let i = 0; i < 8; i++)
+    t.send("CHOOSE", { choice: i + 1 }, { userId: `p${i}` });
+  const input = projectState(t.state, "p0");
+  assert.equal(input.round.picks.length, 8);
+  const gurus = input.round.gurus;
+  advanceState(t.state, t.state.round.deadlineAt);
+  assert.deepEqual(projectState(t.state, "p0").round.gurus, gurus);
+  advanceState(t.state, t.state.round.raceEndsAt);
+  const result = t.state.round.result;
+  assert.equal(result.drinkerIds.length, 5);
+  assert.equal(result.safeIds.length, 3);
+  assert.equal(result.players.filter((p) => p.missed).length, 2);
+  for (const p of result.players) {
+    assert.equal(p.mustDrink, !!p.rank && p.rank > 3);
+    assert.equal(p.drinks, p.mustDrink ? 1 : 0);
+    assert.equal(t.state.scores[p.userId]?.drinks || 0, p.drinks);
+  }
+  assert.equal(projectState(t.state, "p0").round.picks.length, 8);
+  const scores = JSON.stringify(t.state.scores);
+  advanceState(t.state, t.state.round.raceEndsAt + 100000);
+  assert.equal(JSON.stringify(t.state.scores), scores);
+});
 
 const members = (n) =>
   Array.from({ length: n }, (_, i) => ({

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { simulateRace } from "../utils/horseEngine.js";
 import { pickQuestion } from "./questions.js";
+import { makeHorseField, makeGurus, presentHorse } from "./horseField.js";
 
 export const GAMES = [
   {
@@ -28,7 +29,7 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 10,
     icon: "horse",
-    rule: "เลือกม้า 1 ตัว · ติด 3 อันดับแรกรอด",
+    rule: "เลือกม้า 1 ตัว · อันดับ 1–3 รอด · อันดับ 4–8 ดื่ม 1 ครั้ง",
   },
   {
     type: "PANIC_JUMP",
@@ -41,16 +42,6 @@ export const GAMES = [
   },
 ];
 
-const HORSES = [
-  ["พญาลม", "#f58158", "พุ่งเหมือนลม"],
-  ["เจ้าฟ้า", "#87b8f5", "นิ่งไว้แล้วไปต่อ"],
-  ["หมูตัน", "#b9c985", "อึดเกินตัว"],
-  ["จอมซิ่ง", "#f2c568", "แรงปลายไว้ใจได้"],
-  ["มังกรดำ", "#ad9cdd", "ดวงมา ไม่มีแผ่ว"],
-  ["สิงห์สนามซ้อม", "#81bda7", "ออกตัวจัดจ้าน"],
-  ["เต่าบินเกียร์ห้า", "#d7ab81", "ช้าแต่มีเซอร์ไพรส์"],
-  ["สายฟ้าหน้ามึน", "#dd92ae", "เดาทางไม่เคยถูก"],
-];
 const ACTIVE = ["INPUT", "RACING"];
 export const fail = (message, code = "INVALID_ACTION") => {
   const err = new Error(message);
@@ -114,16 +105,31 @@ function finish(state, now, skipped = false) {
         points: amount,
         safe: !!safe,
         missed: !rank,
+        mustDrink: !!rank && !safe,
+        drinks: !!rank && !safe ? 1 : 0,
+        horseName: round.horses.find((h) => h.id === choice)?.name || null,
         reason: rank
-          ? `อันดับ ${rank} · ${safe ? "ติดท็อป 3" : "รอบหน้าลุ้นใหม่"}`
+          ? `อันดับ ${rank} · ${safe ? "รอด ไม่ต้องดื่ม" : "ต้องดื่ม 1 ครั้ง"}`
           : "ไม่ได้เลือก · ไม่คิดผลรอบนี้",
       });
     }
     round.result = {
       title: `${round.rankings[0].name} เข้าเส้นชัย!`,
-      description: "ม้าอันดับ 1–3 รอด · คะแนนตามอันดับ 8 ถึง 1 แต้ม",
+      description:
+        "ม้าอันดับ 1–3 รอด · อันดับ 4–8 ดื่ม 1 ครั้ง · ไม่ได้เลือกไม่คิดผล",
       players: results,
+      drinkerIds: results.filter((p) => p.mustDrink).map((p) => p.userId),
+      safeIds: results.filter((p) => p.safe).map((p) => p.userId),
+      gurus: (round.gurus || []).map((g) => ({
+        ...g,
+        rank: round.rankings.find((h) => h.id === g.pickId)?.rank,
+        hit: round.rankings.find((h) => h.id === g.pickId)?.rank <= 3,
+      })),
     };
+    for (const player of results)
+      if (player.mustDrink)
+        state.scores[player.userId].drinks =
+          (state.scores[player.userId].drinks || 0) + 1;
   } else if (round.gameType === "MINORITY_VOTE") {
     const values = Object.values(round.actions);
     const a = values.filter((v) => v.choice === "A").length;
@@ -298,7 +304,7 @@ function startRound(state, ctx) {
     startsAt,
     deadlineAt:
       startsAt +
-      (type === "PANIC_JUMP" ? 8000 : type === "HORSE_RACE" ? 18000 : 20000),
+      (type === "PANIC_JUMP" ? 8000 : type === "HORSE_RACE" ? 45000 : 20000),
   };
   if (type === "MINORITY_VOTE") {
     round.question =
@@ -308,15 +314,8 @@ function startRound(state, ctx) {
     state.seen.push(round.question.id);
     state.seen = state.seen.slice(-120);
   } else if (type === "HORSE_RACE") {
-    round.horses = HORSES.map(([name, color, personality], index) => ({
-      id: index + 1,
-      name,
-      color,
-      personality,
-      speed: 70 + Math.floor(Math.random() * 21),
-      stamina: 70 + Math.floor(Math.random() * 21),
-      luck: 70 + Math.floor(Math.random() * 21),
-    }));
+    round.horses = makeHorseField();
+    round.gurus = makeGurus(round.id, round.horses);
   } else round.quota = Math.max(1, Math.floor((participants.length - 1) / 2));
   state.round = round;
   state.phase = "INPUT";
@@ -516,12 +515,21 @@ export function projectState(state, userId) {
     const round = result.round;
     round.submitted = Object.keys(round.actions).length;
     round.myAction = round.actions[userId] || null;
+    if (round.gameType === "HORSE_RACE") {
+      round.horses = round.horses.map(presentHorse);
+      round.gurus ||= makeGurus(round.id, round.horses);
+      if (round.result && !round.result.skipped)
+        round.result.gurus ||= round.gurus.map((g) => {
+          const rank = round.rankings.find((h) => h.id === g.pickId)?.rank;
+          return { ...g, rank, hit: rank <= 3 };
+        });
+      round.picks = Object.entries(round.actions).map(([id, value]) => ({
+        userId: id,
+        horseId: value.choice,
+      }));
+    }
     if (result.phase === "INPUT") {
       if (round.gameType === "HORSE_RACE") {
-        round.picks = Object.entries(round.actions).map(([id, value]) => ({
-          userId: id,
-          horseId: value.choice,
-        }));
         round.horses.forEach((h) => {
           delete h.speed;
           delete h.stamina;

@@ -6,6 +6,7 @@ import { useParty } from "../hooks/useParty";
 import { api } from "../utils/api";
 import { getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
+import { HorseInput, Race, HorseResults } from "../components/HorseGame";
 
 const gameLabels = {
   HORSE_RACE: ["แข่งม้า", "horse"],
@@ -252,115 +253,6 @@ function RoundTimer({ now, round, phase }) {
   );
 }
 
-function HorseInput({ round, disabled, command }) {
-  return (
-    <>
-      <div className="horse-choices">
-        {round.horses.map((horse, index) => {
-          const selected = round.myAction?.choice === horse.id;
-          const picks =
-            round.picks?.filter((p) => p.horseId === horse.id).length || 0;
-          return (
-            <button
-              className={`horse-option ${selected ? "selected" : ""}`}
-              key={horse.id}
-              aria-pressed={selected}
-              disabled={disabled}
-              onClick={() => command("CHOOSE", { choice: horse.id })}
-              style={{ "--horse-color": horse.color }}
-            >
-              <span className="horse-option-number">0{index + 1}</span>
-              <span className="horse-option-emoji">
-                {index === 1
-                  ? "🦄"
-                  : index === 6
-                    ? "🐢"
-                    : index === 7
-                      ? "⚡"
-                      : "🐎"}
-              </span>
-              <strong>{horse.name}</strong>
-              <span className="horse-personality">{horse.personality}</span>
-              <span className="horse-option-bottom">
-                {selected ? (
-                  <>
-                    <Icon name="check" size={15} /> ตัวที่คุณเชียร์
-                  </>
-                ) : (
-                  `${picks} คนเชียร์`
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="round-hint">
-        {round.myAction
-          ? "เลือกแล้ว เปลี่ยนตัวได้จนหมดเวลา"
-          : "เลือกม้า 1 ตัว แล้วเตรียมเชียร์ให้ติดท็อป 3"}
-      </p>
-    </>
-  );
-}
-
-function Race({ round, now }) {
-  const progress = Math.max(
-    0,
-    Math.min(
-      1,
-      (now - round.raceStartedAt) / (round.raceEndsAt - round.raceStartedAt),
-    ),
-  );
-  const frame =
-    round.frames?.[
-      Math.min(
-        round.frames.length - 1,
-        Math.floor(progress * round.frames.length),
-      )
-    ] || [];
-  return (
-    <div className="party-race">
-      <div className="race-top-label">
-        <span>START</span>
-        <span>FINISH</span>
-      </div>
-      {round.horses.map((horse, index) => {
-        const position = frame.find((row) => row[0] === horse.id)?.[1] || 0;
-        const mine = horse.id === round.myAction?.choice;
-        return (
-          <div
-            className={`party-lane ${mine ? "my-lane" : ""}`}
-            key={horse.id}
-            style={{ "--horse-color": horse.color }}
-          >
-            <div className="lane-title">
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{horse.name}</strong>
-              {mine && <span className="my-horse-label">ของคุณ</span>}
-            </div>
-            <div className="lane-track">
-              <div
-                className="lane-distance"
-                style={{ width: `${(position / 2500) * 94}%` }}
-              />
-              <span
-                className="running-horse"
-                style={{ left: `${(position / 2500) * 94}%` }}
-              >
-                🐎
-              </span>
-              <span className="lane-finish" />
-            </div>
-          </div>
-        );
-      })}
-      <p className="round-hint">
-        ติด 3 อันดับแรกรอด · เชียร์ตัวที่เลือกไว้ได้เลย
-      </p>
-    </div>
-  );
-}
-
 function VoteInput({ round, disabled, command }) {
   const q = round.question;
   return (
@@ -449,6 +341,8 @@ function JumpInput({ round, disabled, command, now }) {
 function Results({ state, userId }) {
   const round = state.round,
     result = round.result;
+  if (round.gameType === "HORSE_RACE" && !result.skipped)
+    return <HorseResults state={state} userId={userId} />;
   const me = result.players.find((p) => p.userId === userId);
   return (
     <div className="results-stage">
@@ -879,6 +773,8 @@ export default function PartyRoom() {
                   </div>
                   {currentType === "HORSE_RACE" ? (
                     <HorseInput
+                      profiles={state.profiles}
+                      userId={user.id}
                       round={round}
                       disabled={
                         disabled ||
@@ -926,7 +822,14 @@ export default function PartyRoom() {
                     )}
                 </>
               )}
-              {phase === "RACING" && <Race round={round} now={now} />}
+              {phase === "RACING" && (
+                <Race
+                  round={round}
+                  now={now}
+                  profiles={state.profiles}
+                  userId={user.id}
+                />
+              )}
               {phase === "RESULTS" && (
                 <>
                   <Results state={state} userId={user.id} />

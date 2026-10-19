@@ -7,6 +7,7 @@ import { SocketProvider } from "./context/SocketContext";
 import "./index.css";
 import "./party.css";
 import "./mobile.css";
+import "./horse.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

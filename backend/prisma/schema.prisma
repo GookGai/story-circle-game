@@ -25,6 +25,7 @@ model User {
   username     String        @unique
   password     String
   avatar       String        @default("cat")
+  isGuest      Boolean       @default(false)
   createdAt    DateTime      @default(now())
 
   // Relations
@@ -48,6 +49,8 @@ model Room {
   settings   Json?
   status     RoomStatus @default(WAITING)
   createdAt  DateTime   @default(now())
+  runtime    Json?
+  revision   Int        @default(0)
 
   // Relations
   host           User            @relation("HostedRooms", fields: [hostId], references: [id])
@@ -72,6 +75,7 @@ model RoomPlayer {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
+  @@index([userId])
 }
 
 // ─── Horse Race ──────────────────────────────────────────────────────────────
@@ -104,6 +108,7 @@ model Horse {
   // Relations
   race HorseRace @relation(fields: [raceId], references: [id], onDelete: Cascade)
   bets Bet[]
+  @@index([raceId])
 }
 
 // ─── Bet ─────────────────────────────────────────────────────────────────────
@@ -119,6 +124,9 @@ model Bet {
   horse Horse     @relation(fields: [horseId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([raceId, userId])
+  @@index([horseId])
+  @@index([userId])
 }
 
 // ─── Vote Round ──────────────────────────────────────────────────────────────
@@ -196,6 +204,7 @@ model PanicJumpRound {
   // Relations
   game     PanicJumpGame     @relation(fields: [gameId], references: [id], onDelete: Cascade)
   jumps    PanicJumpAction[]
+  @@index([gameId])
 }
 
 model PanicJumpAction {

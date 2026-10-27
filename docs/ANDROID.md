@@ -2,7 +2,7 @@
 
 Visual thesis: the existing charcoal, cream and orange game fills the phone, with a matching dice icon and a quiet native splash.
 Content plan: create/join remain the main actions; a saved live circle can be reopened from the first screen; connection problems show one retry action without clearing identity.
-Interaction thesis: native invitations open the join dialog; returning from another app resyncs the game; Android back asks before returning home during play.
+Interaction thesis: enter a six-character circle code; returning from another app resyncs the game; Android back asks before returning home during play.
 
 The Android app bundles the React UI with Capacitor 8. It connects over HTTPS/WSS to the existing Railway service. Internet is required; no new server or subscription is needed. Web guests can keep playing alongside Android users. There are no ads or purchases.
 
@@ -20,6 +20,6 @@ The APK is for direct installation and testing. Installing from a downloaded fil
 
 ## Invitations and checks
 
-HTTPS `/join/CODE` links and QR codes remain usable in browsers. Android App Links require a matching SHA-256 signing certificate in `frontend/public/.well-known/assetlinks.json` and the same host in AndroidManifest.xml. The explicit `storycircle://join/CODE` route also works for direct app launch. Check both cold launch and already-open app, hardware back/dialog dismissal, keyboard visibility, offline/retry, Wi-Fi/mobile switching, process restart, and playing with a browser friend before a public store rollout.
+This trial uses manual six-character code entry. HTTPS invitation links and QR codes keep opening the web version; the manifest does not claim them. Native App Links are deferred after a failed warm-invitation check. The parser and public signing-certificate declaration are retained for future work, but no link-opening capability is promised in this APK. Core acceptance covers creating a circle, joining by code, one shared vote with a browser-protocol companion, reopening the circle and launching the minified APK. Check physical phones before a public store rollout.
 
 Google Play still needs the owner's developer account, store listing, content/policy review, required testing and submission. An APK/AAB build is not Play Store approval.

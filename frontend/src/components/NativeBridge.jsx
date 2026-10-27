@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { App as NativeApp } from '@capacitor/app';
 import { Network } from '@capacitor/network';
-import { invitePath, PRODUCTION_URL } from '../utils/appLinks.mjs';
+import { PRODUCTION_URL } from '../utils/appLinks.mjs';
 import { isNativeApp } from '../utils/platform';
 import RoomConfirmation from './RoomConfirmation';
 
@@ -37,16 +37,7 @@ export default function NativeBridge() {
       if (disposed) await handle.remove();
       else handles.push(handle);
     };
-    const open = (url) => {
-      if (disposed) return;
-      const path = invitePath(url);
-      if (path && currentPath.current !== path) {
-        setHomeConfirmation(false);
-        navigation.current(path);
-      }
-    };
     async function start() {
-      await listen(NativeApp, 'appUrlOpen', ({ url }) => open(url));
       await listen(NativeApp, 'appStateChange', ({ isActive }) => {
         if (isActive && !disposed) {
           window.dispatchEvent(new Event('storycircle:resume'));
@@ -75,8 +66,6 @@ export default function NativeBridge() {
         setOffline(!status.connected);
         if (status.connected) retry();
       }
-      const launch = await NativeApp.getLaunchUrl();
-      if (launch?.url) open(launch.url);
     }
     start().catch(() => { if (!disposed) setOffline(true); });
     return () => {

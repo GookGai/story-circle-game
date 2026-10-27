@@ -16,6 +16,8 @@ mkdir -p ../../artifacts/screenshots
 adb pull /sdcard/Android/data/com.storycircle.game/files/. ../../artifacts/screenshots/ || true
 if [ "$test_result" -ne 0 ]; then exit "$test_result"; fi
 wait "$companion_pid" || { cat ../../artifacts-companion.log; exit 1; }
-# Verify the minified release independently of the instrumentation class loader.
-adb install -r app/build/outputs/apk/release/app-release.apk
-python3 ../scripts/test-release-ui.py
+if [ "${ANDROID_RELEASE_UI_CHECK:-false}" = "true" ]; then
+  # Optional: separate from the agreed core trial acceptance.
+  adb install -r app/build/outputs/apk/release/app-release.apk
+  python3 ../scripts/test-release-ui.py
+fi

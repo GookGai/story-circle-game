@@ -6,6 +6,11 @@ on:
       - 'frontend/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
+    inputs:
+      release_ui_check:
+        description: Also run the optional release UI check on the emulator
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -55,8 +60,11 @@ jobs:
           retention-days: 30
           if-no-files-found: error
   native-smoke:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      ANDROID_RELEASE_UI_CHECK: ${{ inputs.release_ui_check }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

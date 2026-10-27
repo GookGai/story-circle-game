@@ -23,3 +23,9 @@ The APK is for direct installation and testing. Installing from a downloaded fil
 This trial uses manual six-character code entry. HTTPS invitation links and QR codes keep opening the web version; the manifest does not claim them. Native App Links are deferred after a failed warm-invitation check. The parser and public signing-certificate declaration are retained for future work, but no link-opening capability is promised in this APK. Core acceptance covers creating a circle, joining by code, one shared vote with a browser-protocol companion, reopening the circle and launching the minified APK. Check physical phones before a public store rollout.
 
 Google Play still needs the owner's developer account, store listing, content/policy review, required testing and submission. An APK/AAB build is not Play Store approval.
+
+## Trial validation — 2026-10-27
+
+Source `f3443ad28091a73b6364ca8a098081fc36ce9e98`, Android workflow run `40473095242`: release APK/AAB build and Android lint passed. On the Android 15 emulator, the functional test passed creating a circle, joining a separate circle by code, submitting a vote alongside a browser-protocol companion, reaching the same two-player result, reopening the WebView with the same identity and circle, and leaving the disposable circle. The companion report records `passed: true`. Frontend checks and the existing multiplayer CI passed.
+
+The separate release UI check was blocked by an emulator system dialog, `Pixel Launcher isn't responding`; it did not verify the minified release UI. This does not count as a passing release UI check. The locally signed trial APK still needs physical-phone testing. App-link opening is deferred. Emulator checks now run on manual workflow dispatch to avoid repeating expensive device work on every frontend push; the release UI check is an explicit optional input.

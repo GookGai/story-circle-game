@@ -43,6 +43,7 @@ jobs:
           mkdir -p artifacts/tooling
           cp frontend/android/app/build/outputs/apk/release/app-release-unsigned.apk artifacts/story-circle-unsigned.apk
           cp frontend/android/app/build/outputs/bundle/release/app-release.aab artifacts/story-circle-unsigned.aab
+          cp frontend/android/app/build/outputs/mapping/release/mapping.txt artifacts/mapping.txt
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" artifacts/tooling/
           cp "$ANDROID_HOME/build-tools/36.0.0/NOTICE.txt" artifacts/tooling/NOTICE.txt
           echo '${{ github.sha }}' > artifacts/commit.txt
@@ -87,11 +88,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            chmod +x frontend/android/gradlew
-            cd frontend/android && ANDROID_NATIVE_TEST=true ./gradlew --no-daemon connectedReleaseAndroidTest
-            mkdir -p artifacts/screenshots
-            adb pull /sdcard/Android/data/com.storycircle.game/files/. artifacts/screenshots/
+          script: bash frontend/scripts/run-native-smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

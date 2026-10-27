@@ -76,6 +76,30 @@ public class AppLaunchTest {
             awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('[role=dialog]')");
             SystemClock.sleep(1000);
             assertEquals("Cold-launch invitation must not reopen on every route change", "true", evaluate(scenario, "location.pathname === '/'"));
+            // Exercise real HTTPS authentication and Socket.IO from the packaged origin.
+            awaitTrue(scenario, "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'สร้างวงใหม่' && !b.disabled)");
+            evaluate(scenario, "Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'สร้างวงใหม่').click()");
+            awaitTrue(scenario, "!!document.querySelector('input[autocomplete=nickname]')");
+            evaluate(scenario, "(() => { const input = document.querySelector('input[autocomplete=nickname]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Android QA'); input.dispatchEvent(new Event('input', {bubbles:true})); })()");
+            evaluate(scenario, "document.querySelector('.entry-form').requestSubmit()");
+            awaitTrue(scenario, "/^\\/room\\/[A-Z0-9]{6}$/.test(location.pathname) && !!document.querySelector('.room-heading') && document.body.innerText.includes('Android QA')");
+            screenshot("android-room.png");
+            androidx.test.espresso.Espresso.closeSoftKeyboard();
+            androidx.test.espresso.Espresso.pressBack();
+            awaitTrue(scenario, "!!document.querySelector('.room-confirmation') && document.body.innerText.includes('กลับไปหน้าแรก?')");
+            evaluate(scenario, "document.querySelector('.room-confirmation .p-button.primary').click()");
+            awaitTrue(scenario, "location.pathname === '/' && document.body.innerText.includes('เล่นวงเดิมต่อ')");
+        }
+        // Destroy/recreate the WebView: identity and the live circle must survive.
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            awaitTrue(scenario, "location.pathname === '/' && document.body.innerText.includes('Android QA') && !!document.querySelector('.app-return')");
+            evaluate(scenario, "document.querySelector('.app-return').click()");
+            awaitTrue(scenario, "location.pathname.startsWith('/room/') && !!document.querySelector('.room-heading')");
+            // Leave only this newly-created QA circle through the same control as players.
+            evaluate(scenario, "document.querySelector('button[aria-label=ออกจากวง]').click()");
+            awaitTrue(scenario, "!!document.querySelector('.room-confirmation')");
+            evaluate(scenario, "document.querySelector('.room-confirmation .p-button.primary').click()");
+            awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('.app-return')");
         }
     }
 }

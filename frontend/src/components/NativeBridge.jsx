@@ -10,10 +10,11 @@ export default function NativeBridge() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const currentPath = useRef(pathname);
+  const navigation = useRef(navigate);
   const [homeConfirmation, setHomeConfirmation] = useState(false);
   const [offline, setOffline] = useState(false);
   const [checking, setChecking] = useState(false);
-  useEffect(() => { currentPath.current = pathname; }, [pathname]);
+  useEffect(() => { currentPath.current = pathname; navigation.current = navigate; }, [pathname, navigate]);
 
   const retry = useCallback(async () => {
     setChecking(true);
@@ -41,7 +42,7 @@ export default function NativeBridge() {
       const path = invitePath(url);
       if (path && currentPath.current !== path) {
         setHomeConfirmation(false);
-        navigate(path);
+        navigation.current(path);
       }
     };
     async function start() {
@@ -61,7 +62,7 @@ export default function NativeBridge() {
         }
         if (currentPath.current.startsWith('/room/') || currentPath.current.startsWith('/game/')) {
           setHomeConfirmation(true);
-        } else if (currentPath.current !== '/') navigate('/', { replace: true });
+        } else if (currentPath.current !== '/') navigation.current('/', { replace: true });
         else NativeApp.minimizeApp();
       });
       await listen(Network, 'networkStatusChange', ({ connected }) => {
@@ -82,7 +83,7 @@ export default function NativeBridge() {
       disposed = true;
       handles.forEach((handle) => handle.remove());
     };
-  }, [navigate, retry]);
+  }, [retry]);
 
   if (!isNativeApp) return null;
   return <>

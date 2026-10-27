@@ -71,6 +71,11 @@ public class AppLaunchTest {
         }
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(invitation(WEB + "/join/JK56LM"))) {
             awaitTrue(scenario, "location.pathname === '/join/JK56LM' && !!document.querySelector('input[value=JK56LM]')");
+            androidx.test.espresso.Espresso.closeSoftKeyboard();
+            androidx.test.espresso.Espresso.pressBack();
+            awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('[role=dialog]')");
+            SystemClock.sleep(1000);
+            assertEquals("Cold-launch invitation must not reopen on every route change", "true", evaluate(scenario, "location.pathname === '/'"));
         }
     }
 }

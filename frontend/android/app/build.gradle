@@ -18,11 +18,14 @@ android {
     }
     buildTypes {
         release {
+            // Emulator tests use a disposable debug key; distributed builds are signed locally.
+            if (System.getenv('ANDROID_NATIVE_TEST') == 'true') signingConfig signingConfigs.debug
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    if (System.getenv('ANDROID_NATIVE_TEST') == 'true') testBuildType 'release'
 }
 
 repositories {

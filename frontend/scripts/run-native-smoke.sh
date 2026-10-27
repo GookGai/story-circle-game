@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 cd "$(dirname "$0")/../android"
-./gradlew --no-daemon connectedDebugAndroidTest
+./gradlew --no-daemon :app:connectedDebugAndroidTest
 test_result=$?
 mkdir -p ../../artifacts/screenshots
 adb pull /sdcard/Android/data/com.storycircle.game/files/. ../../artifacts/screenshots/ || true

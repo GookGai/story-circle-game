@@ -37,7 +37,7 @@ jobs:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease bundleRelease lintRelease
+          ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease :app:lintRelease
       - name: Prepare local-signing artifacts
         run: |
           mkdir -p artifacts/tooling
@@ -80,7 +80,7 @@ jobs:
         working-directory: frontend/android
         run: |
           chmod +x gradlew
-          ANDROID_NATIVE_TEST=true ./gradlew --no-daemon assembleRelease assembleDebug assembleDebugAndroidTest
+          ANDROID_NATIVE_TEST=true ./gradlew --no-daemon :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35

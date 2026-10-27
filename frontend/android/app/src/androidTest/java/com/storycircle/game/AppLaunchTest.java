@@ -84,6 +84,14 @@ public class AppLaunchTest {
             evaluate(scenario, "document.querySelector('.entry-form').requestSubmit()");
             awaitTrue(scenario, "/^\\/room\\/[A-Z0-9]{6}$/.test(location.pathname) && !!document.querySelector('.room-heading') && document.body.innerText.includes('Android QA')");
             screenshot("android-room.png");
+            evaluate(scenario, "(() => { const panel = document.querySelector('.mobile-invite'); panel.open = true; Array.from(panel.querySelectorAll('button')).find(b => b.textContent.includes('คัดลอกลิงก์ชวนเพื่อน')).click(); })()");
+            awaitTrue(scenario, "document.querySelector('.mobile-invite').textContent.includes('คัดลอกลิงก์แล้ว')");
+            AtomicReference<String> copied = new AtomicReference<>("");
+            scenario.onActivity(activity -> {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (clipboard.hasPrimaryClip()) copied.set(clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+            });
+            assertTrue("Native clipboard contains a public invitation, never localhost", copied.get().startsWith(WEB + "/join/"));
             androidx.test.espresso.Espresso.closeSoftKeyboard();
             androidx.test.espresso.Espresso.pressBack();
             awaitTrue(scenario, "!!document.querySelector('.room-confirmation') && document.body.innerText.includes('กลับไปหน้าแรก?')");

@@ -13,6 +13,7 @@ import RoomConfirmation from "../components/RoomConfirmation";
 import { publicOrigin, isNativeApp } from "../utils/platform";
 import { roomInviteUrl } from "../utils/appLinks.mjs";
 import { Share } from "@capacitor/share";
+import { Clipboard } from "@capacitor/clipboard";
 import { readiness, playerStatus } from "../utils/readiness";
 import {
   ForbiddenGame,
@@ -58,7 +59,8 @@ function Invite({ code }) {
   }, [url]);
   async function copy() {
     try {
-      await navigator.clipboard.writeText(url);
+      if (isNativeApp) await Clipboard.write({ string: url, label: 'ลิงก์เข้าวง Story Circle' });
+      else await navigator.clipboard.writeText(url);
       setCopied(true);
     } catch {
       setError("คัดลอกไม่ได้ ให้เพื่อนกรอกรหัสวงด้านบน");

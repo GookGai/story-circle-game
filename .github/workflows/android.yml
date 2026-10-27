@@ -95,6 +95,7 @@ jobs:
           name: story-circle-native-smoke-${{ github.run_number }}
           path: |
             artifacts/screenshots/
+            artifacts/android-gameplay.json
             frontend/android/app/build/reports/androidTests/
             frontend/android/app/build/outputs/androidTest-results/
           retention-days: 14

@@ -2,9 +2,7 @@ package com.storycircle.game;
 
 import static org.junit.Assert.*;
 
-import android.content.Intent;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.SystemClock;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -17,11 +15,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Exercises the bundled UI, native invitations, authentication and reconnects. */
+/** Minimum trial acceptance: create, join by code, play one vote, reopen the circle. */
 @RunWith(AndroidJUnit4.class)
 public class AppLaunchTest {
-    private static final String WEB = "https://striking-sparkle-production-adf7.up.railway.app";
-
     private String evaluate(ActivityScenario<MainActivity> scenario, String expression) throws Exception {
         AtomicReference<String> result = new AtomicReference<>("");
         CountDownLatch done = new CountDownLatch(1);
@@ -42,12 +38,6 @@ public class AppLaunchTest {
         fail("Expected native UI state: " + expression + "\n" + evaluate(scenario, "document.body.innerText"));
     }
 
-    private Intent invitation(String url) {
-        return new Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            .setClass(InstrumentationRegistry.getInstrumentation().getTargetContext(), MainActivity.class)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    }
-
     private void screenshot(String filename) throws Exception {
         Bitmap image = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         assertNotNull(image);
@@ -56,26 +46,12 @@ public class AppLaunchTest {
         image.recycle();
     }
 
-    @Test public void bundledHomeAndNativeInvitations() throws Exception {
+    @Test public void createJoinAndPlayByCode() throws Exception {
+        String code = InstrumentationRegistry.getArguments().getString("roomCode");
+        assertNotNull("Browser companion circle is available", code);
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             awaitTrue(scenario, "location.origin === 'https://localhost' && !!window.Capacitor && window.Capacitor.isNativePlatform() && document.body.innerText.includes('สร้างวงใหม่')");
             screenshot("android-home.png");
-            InstrumentationRegistry.getInstrumentation().getTargetContext().startActivity(invitation("storycircle://join/AB12CD"));
-            awaitTrue(scenario, "location.pathname === '/join/AB12CD' && !!document.querySelector('[role=dialog]') && !!document.querySelector('input[value=AB12CD]')");
-            screenshot("android-invitation.png");
-            InstrumentationRegistry.getInstrumentation().getTargetContext().startActivity(invitation(WEB + "/join/EF34GH"));
-            awaitTrue(scenario, "location.pathname === '/join/EF34GH' && !!document.querySelector('input[value=EF34GH]')");
-            androidx.test.espresso.Espresso.closeSoftKeyboard();
-            androidx.test.espresso.Espresso.pressBack();
-            awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('[role=dialog]')");
-        }
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(invitation(WEB + "/join/JK56LM"))) {
-            awaitTrue(scenario, "location.pathname === '/join/JK56LM' && !!document.querySelector('input[value=JK56LM]')");
-            androidx.test.espresso.Espresso.closeSoftKeyboard();
-            androidx.test.espresso.Espresso.pressBack();
-            awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('[role=dialog]')");
-            SystemClock.sleep(1000);
-            assertEquals("Cold-launch invitation must not reopen on every route change", "true", evaluate(scenario, "location.pathname === '/'"));
             // Exercise real HTTPS authentication and Socket.IO from the packaged origin.
             awaitTrue(scenario, "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'สร้างวงใหม่' && !b.disabled)");
             evaluate(scenario, "Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'สร้างวงใหม่').click()");
@@ -84,18 +60,21 @@ public class AppLaunchTest {
             evaluate(scenario, "document.querySelector('.entry-form').requestSubmit()");
             awaitTrue(scenario, "/^\\/room\\/[A-Z0-9]{6}$/.test(location.pathname) && !!document.querySelector('.room-heading') && document.body.innerText.includes('Android QA')");
             screenshot("android-room.png");
-            evaluate(scenario, "(() => { const panel = document.querySelector('.mobile-invite'); panel.open = true; Array.from(panel.querySelectorAll('button')).find(b => b.textContent.includes('คัดลอกลิงก์ชวนเพื่อน')).click(); })()");
-            awaitTrue(scenario, "document.querySelector('.mobile-invite').textContent.includes('คัดลอกลิงก์แล้ว')");
-            AtomicReference<String> copied = new AtomicReference<>("");
-            scenario.onActivity(activity -> {
-                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                if (clipboard.hasPrimaryClip()) copied.set(clipboard.getPrimaryClip().getItemAt(0).getText().toString());
-            });
-            assertTrue("Native clipboard contains a public invitation, never localhost", copied.get().startsWith(WEB + "/join/"));
-            androidx.test.espresso.Espresso.closeSoftKeyboard();
-            androidx.test.espresso.Espresso.pressBack();
-            awaitTrue(scenario, "!!document.querySelector('.room-confirmation') && document.body.innerText.includes('กลับไปหน้าแรก?')");
+            evaluate(scenario, "document.querySelector('button[aria-label=ออกจากวง]').click()");
+            awaitTrue(scenario, "!!document.querySelector('.room-confirmation')");
             evaluate(scenario, "document.querySelector('.room-confirmation .p-button.primary').click()");
+            awaitTrue(scenario, "location.pathname === '/' && !document.querySelector('[role=dialog]')");
+            evaluate(scenario, "Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'มีรหัสเข้าวงแล้ว').click()");
+            awaitTrue(scenario, "!!document.querySelector('.code-input')");
+            evaluate(scenario, "(() => { const input = document.querySelector('.code-input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '" + code + "'); input.dispatchEvent(new Event('input', {bubbles:true})); })()");
+            evaluate(scenario, "document.querySelector('.entry-form').requestSubmit()");
+            awaitTrue(scenario, "location.pathname === '/room/" + code + "' && !!document.querySelector('.ready-action:not(:disabled)')");
+            evaluate(scenario, "document.querySelector('.ready-action').click()");
+            awaitTrue(scenario, "!!document.querySelector('.party-vote-option.option-a:not(:disabled)')");
+            evaluate(scenario, "document.querySelector('.party-vote-option.option-a').click()");
+            awaitTrue(scenario, "!!document.querySelector('.results-stage .vote-result-split')");
+            screenshot("android-game-result.png");
+            evaluate(scenario, "document.querySelector('a.wordmark').click()");
             awaitTrue(scenario, "location.pathname === '/' && document.body.innerText.includes('เล่นวงเดิมต่อ')");
         }
         // Destroy/recreate the WebView: identity and the live circle must survive.

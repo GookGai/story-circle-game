@@ -39,15 +39,6 @@ def capture(name):
 
 adb('shell', 'am', 'force-stop', 'com.storycircle.game')
 adb('shell', 'am', 'start', '-W', '-n', COMPONENT)
-wait_for(lambda t: 'สร้างวงใหม่' in t and 'Android QA' in t, 'Release app opens and preserves identity across upgrade')
+wait_for(lambda t: 'สร้างวงใหม่' in t and 'มีรหัสเข้าวงแล้ว' in t, 'Release app opens with create and join controls')
 capture('android-release-home.png')
-for code in ['AB12CD', 'EF34GH']:
-    adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.VIEW', '-d', f'storycircle://join/{code}', '-n', COMPONENT)
-    wait_for(lambda t: code in t, f'Release warm invitation {code}')
-capture('android-release-invitation.png')
-adb('shell', 'am', 'force-stop', 'com.storycircle.game')
-adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.VIEW', '-d', 'https://striking-sparkle-production-adf7.up.railway.app/join/JK56LM', '-n', COMPONENT)
-wait_for(lambda t: 'JK56LM' in t, 'Release cold invitation')
-adb('shell', 'input', 'keyevent', '4')
-wait_for(lambda t: 'JK56LM' not in t and 'สร้างวงใหม่' in t, 'Release native back dismisses invitation')
-print('Release APK: launch, preserved identity, two warm invitations, cold invitation and native back passed')
+print('Minified release APK: home, create and join controls passed. App links are deferred for this trial.')

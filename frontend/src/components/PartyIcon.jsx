@@ -1,4 +1,10 @@
 const paths = {
+  secret: (
+    <>
+      <rect x="4" y="10" width="16" height="11" rx="3" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+    </>
+  ),
   arrow: (
     <>
       <path d="M5 12h14M13 6l6 6-6 6" />

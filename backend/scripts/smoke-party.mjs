@@ -230,6 +230,109 @@ try {
 
   await reset(host);
   await ready(clients);
+  await configure(host, "FORBIDDEN_WORD");
+  await command(host, "FORBIDDEN_SETTINGS", { wordCount: 2 });
+  await command(host, "START");
+  await waitUntil(() =>
+    clients.every((c) => c.state.state.phase === "FORBIDDEN"),
+  );
+  for (const c of clients) {
+    assert.equal(c.state.state.round.assignments[c.user.id].words, undefined);
+    assert.ok(
+      c.state.state.forbiddenConfig.categories.every(
+        (cat) => cat.words === undefined,
+      ),
+    );
+    assert.equal(c.state.state.round.recent, undefined);
+  }
+  await waitUntil(
+    () =>
+      Date.now() >
+      host.state.state.round.assignments[host.user.id].activeAt + 50,
+  );
+  const target = clients[1],
+    other = clients[2];
+  const assignment = host.state.state.round.assignments[target.user.id];
+  const captured = {
+    targetId: target.user.id,
+    generation: assignment.generation,
+    wordId: assignment.words[0].id,
+  };
+  const catches = await Promise.all([
+    command(host, "FORBIDDEN_KILL", captured, false),
+    command(other, "FORBIDDEN_KILL", captured, false),
+  ]);
+  assert.equal(catches.filter((r) => r.ok).length, 1);
+  await waitUntil(
+    () => target.state.state.round.assignments[target.user.id].status === "HIT",
+  );
+  assert.equal(target.state.state.round.stats[target.user.id].hits, 1);
+  await command(target, "FORBIDDEN_RESET", {
+    generation: assignment.generation,
+  });
+  const resetGeneration =
+    target.state.state.round.assignments[target.user.id].generation;
+  await waitUntil(
+    () =>
+      host.state.state.round.assignments[target.user.id].generation ===
+      resetGeneration,
+  );
+  const event = host.state.state.round.events.find((e) => e.type === "KILL");
+  await command(host, "FORBIDDEN_VOID", { eventId: event.id });
+  assert.equal(
+    host.state.state.round.assignments[target.user.id].generation,
+    resetGeneration,
+  );
+  assert.equal(host.state.state.round.stats[target.user.id].hits, 0);
+  await command(host, "FORBIDDEN_ADD_CATEGORY", {
+    name: "QA Custom",
+    lines: "คำลองหนึ่ง | คำลองรวม\nคำลองสอง\nคำลองสาม",
+  });
+  assert.equal(host.state.state.forbiddenConfig.categories.at(-1).wordCount, 3);
+  const rotation = host.state.state.round.assignments[host.user.id];
+  host.socket.disconnect();
+  host.socket.connect();
+  await new Promise((r) => host.socket.once("connect", r));
+  const recovery = await emit(host.socket, "party:sync", code);
+  assert.equal(
+    recovery.snapshot.state.round.assignments[host.user.id].generation,
+    rotation.generation,
+  );
+  if (recovery.snapshot.room.revision >= host.state.room.revision)
+    host.state = recovery.snapshot;
+  await command(host, "PAUSE");
+  await command(host, "RESUME");
+  if (process.argv.includes("--rotation")) {
+    const before = host.state.state.round.assignments[host.user.id];
+    assert.equal(before.rotateAt - before.assignedAt >= 180000, true);
+    await waitUntil(
+      () =>
+        host.state.state.round.assignments[host.user.id].generation !==
+        before.generation,
+      before.rotateAt - Date.now() + 15000,
+    );
+    assert.ok(
+      host.state.state.round.assignments[host.user.id].activeAt >=
+        before.rotateAt + 5000,
+    );
+    report.push(
+      "real 180-second rotation persisted and broadcast after reconnect/pause",
+    );
+  }
+  await command(host, "END");
+  assert.equal(host.state.state.phase, "FINISHED");
+  assert.equal(
+    host.state.state.round.result.players.find(
+      (p) => p.userId === target.user.id,
+    ).hits,
+    0,
+  );
+  report.push(
+    `${count}-client forbidden words, private projection, concurrent Kill, reset, void, custom bank, reconnect and pause`,
+  );
+
+  await reset(host);
+  await ready(clients);
   await start(host, "PANIC_JUMP");
   const jumpRound = host.state.state.round.id;
   await Promise.all(clients.map((c) => command(c, "JUMP")));

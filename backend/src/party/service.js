@@ -1,12 +1,17 @@
 import prisma from "../utils/prisma.js";
 import { authenticateSocket } from "../middleware/auth.js";
 import {
+  nextForbiddenDeadline,
+  removeForbiddenMember,
+} from "./forbiddenWords.js";
+import {
   initialState,
   applyCommand,
   advanceState,
   projectState,
   displayName,
   fail,
+  finish,
 } from "./engine.js";
 
 const publicUser = { id: true, username: true, avatar: true };
@@ -81,9 +86,13 @@ async function mutateTransaction(code, work) {
             data: {
               runtime: result?.state || state,
               revision: { increment: 1 },
-              status: ["INPUT", "RACING", "RESULTS", "PAUSED"].includes(
-                (result?.state || state).phase,
-              )
+              status: [
+                "INPUT",
+                "RACING",
+                "RESULTS",
+                "PAUSED",
+                "FORBIDDEN",
+              ].includes((result?.state || state).phase)
                 ? "PLAYING"
                 : (result?.state || state).phase === "FINISHED"
                   ? "FINISHED"
@@ -192,11 +201,15 @@ function schedule(room) {
   timers.delete(room.id);
   const state = room.runtime;
   const deadline =
-    state?.phase === "INPUT"
-      ? state.round?.deadlineAt
-      : state?.phase === "RACING"
-        ? state.round?.raceEndsAt
-        : null;
+    state?.phase === "FORBIDDEN"
+      ? onlineIds(room.id).size
+        ? nextForbiddenDeadline(state)
+        : state.round.endsAt
+      : state?.phase === "INPUT"
+        ? state.round?.deadlineAt
+        : state?.phase === "RACING"
+          ? state.round?.raceEndsAt
+          : null;
   if (!deadline) return;
   const timer = setTimeout(
     async () => {
@@ -253,11 +266,13 @@ export async function leaveRoom(code, userId) {
     if (!members.some((p) => p.id === userId))
       fail("คุณไม่ได้อยู่ในวงนี้", "NOT_MEMBER");
     await tx.roomPlayer.deleteMany({ where: { roomId: room.id, userId } });
+    removeForbiddenMember(state, userId);
     state.ready = state.ready.filter((id) => id !== userId);
     state.sittingOut = state.sittingOut.filter((id) => id !== userId);
     const remaining = members.filter((p) => p.id !== userId);
     const next = remaining.find((p) => p.online) || remaining[0];
     if (!remaining.length) {
+      if (state.round?.gameType === "FORBIDDEN_WORD") finish(state, Date.now());
       // Keep the summary for a day. Do not cascade away other guests/history.
       state.phase = "FINISHED";
       state.round = state.round

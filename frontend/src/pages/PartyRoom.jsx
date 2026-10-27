@@ -11,8 +11,14 @@ import { HorseInput, Race, HorseResults } from "../components/HorseGame";
 import { ReadyDock, ReadyRollCall } from "../components/ReadyControls";
 import RoomConfirmation from "../components/RoomConfirmation";
 import { readiness, playerStatus } from "../utils/readiness";
+import {
+  ForbiddenGame,
+  ForbiddenSettings,
+  ForbiddenSummary,
+} from "../components/ForbiddenGame";
 
 const gameLabels = {
+  FORBIDDEN_WORD: ["คำต้องห้ามประจำตัว", "secret"],
   HORSE_RACE: ["แข่งม้า", "horse"],
   MINORITY_VOTE: ["โหวตข้างน้อย", "vote"],
   PANIC_JUMP: ["ร่มชูชีพวัดใจ", "jump"],
@@ -81,7 +87,7 @@ function Invite({ code }) {
   );
 }
 
-function Settings({ config, games, command, disabled }) {
+function Settings({ config, games, command, disabled, forbiddenConfig }) {
   const [custom, setCustom] = useState({
     question: "",
     optionA: "",
@@ -108,84 +114,98 @@ function Settings({ config, games, command, disabled }) {
           </button>
         ))}
       </div>
-      <div className="settings-row">
-        <label>
-          จำนวนรอบ
-          <select
-            value={config.totalRounds}
-            disabled={disabled}
-            onChange={(e) => update({ totalRounds: Number(e.target.value) })}
-          >
-            <option value="3">3 รอบ · ลองก่อน</option>
-            <option value="6">6 รอบ · กำลังดี</option>
-            <option value="9">9 รอบ · เล่นยาว</option>
-          </select>
-        </label>
-        <label>
-          ชุดคำถาม
-          <select
-            value={config.category}
-            disabled={disabled}
-            onChange={(e) => update({ category: e.target.value })}
-          >
-            <option value="all">รวมทุกอารมณ์</option>
-            <option value="warmup">เริ่มวงสบาย ๆ</option>
-            <option value="friends">เรื่องของเพื่อน</option>
-            <option value="chaos">สมมติกวน ๆ</option>
-          </select>
-        </label>
-      </div>
-      <p className="field-note">
-        วง 2 คนจะเล่นโหมดใจตรงกันแทนโหวตข้างน้อย · ร่มชูชีพเริ่มที่ 3 คน
-      </p>
-      <details className="custom-question">
-        <summary>อยากถามเรื่องในวง? เขียนคำถามเอง</summary>
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const ok = await command("CUSTOM_QUESTION", custom);
-            if (ok) setSaved(true);
-          }}
-        >
-          <label>
-            คำถาม
-            <input
-              className="p-input"
-              required
-              maxLength={140}
-              value={custom.question}
-              onChange={(e) => {
-                setSaved(false);
-                setCustom({ ...custom, question: e.target.value });
-              }}
-              placeholder="เลือกอะไรดีระหว่าง…"
-            />
-          </label>
+      {config.gameType === "FORBIDDEN_WORD" ? (
+        <ForbiddenSettings
+          settings={forbiddenConfig}
+          command={command}
+          disabled={disabled}
+        />
+      ) : (
+        <>
           <div className="settings-row">
-            {["A", "B"].map((choice) => (
-              <label key={choice}>
-                ตัวเลือก {choice}
+            <label>
+              จำนวนรอบ
+              <select
+                value={config.totalRounds}
+                disabled={disabled}
+                onChange={(e) =>
+                  update({ totalRounds: Number(e.target.value) })
+                }
+              >
+                <option value="3">3 รอบ · ลองก่อน</option>
+                <option value="6">6 รอบ · กำลังดี</option>
+                <option value="9">9 รอบ · เล่นยาว</option>
+              </select>
+            </label>
+            <label>
+              ชุดคำถาม
+              <select
+                value={config.category}
+                disabled={disabled}
+                onChange={(e) => update({ category: e.target.value })}
+              >
+                <option value="all">รวมทุกอารมณ์</option>
+                <option value="warmup">เริ่มวงสบาย ๆ</option>
+                <option value="friends">เรื่องของเพื่อน</option>
+                <option value="chaos">สมมติกวน ๆ</option>
+              </select>
+            </label>
+          </div>
+          <p className="field-note">
+            วง 2 คนจะเล่นโหมดใจตรงกันแทนโหวตข้างน้อย · ร่มชูชีพเริ่มที่ 3 คน
+          </p>
+          <details className="custom-question">
+            <summary>อยากถามเรื่องในวง? เขียนคำถามเอง</summary>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const ok = await command("CUSTOM_QUESTION", custom);
+                if (ok) setSaved(true);
+              }}
+            >
+              <label>
+                คำถาม
                 <input
                   className="p-input"
                   required
-                  maxLength={70}
-                  value={custom[`option${choice}`]}
+                  maxLength={140}
+                  value={custom.question}
                   onChange={(e) => {
                     setSaved(false);
-                    setCustom({
-                      ...custom,
-                      [`option${choice}`]: e.target.value,
-                    });
+                    setCustom({ ...custom, question: e.target.value });
                   }}
+                  placeholder="เลือกอะไรดีระหว่าง…"
                 />
               </label>
-            ))}
-          </div>
-          <button className="p-button outline full" disabled={disabled}>
-            {saved ? "เตรียมคำถามนี้ไว้ตาถัดไปแล้ว" : "ใช้คำถามนี้ในตาถัดไป"}
-          </button>
-        </form>
-      </details>
+              <div className="settings-row">
+                {["A", "B"].map((choice) => (
+                  <label key={choice}>
+                    ตัวเลือก {choice}
+                    <input
+                      className="p-input"
+                      required
+                      maxLength={70}
+                      value={custom[`option${choice}`]}
+                      onChange={(e) => {
+                        setSaved(false);
+                        setCustom({
+                          ...custom,
+                          [`option${choice}`]: e.target.value,
+                        });
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+              <button className="p-button outline full" disabled={disabled}>
+                {saved
+                  ? "เตรียมคำถามนี้ไว้ตาถัดไปแล้ว"
+                  : "ใช้คำถามนี้ในตาถัดไป"}
+              </button>
+            </form>
+          </details>
+        </>
+      )}
     </section>
   );
 }
@@ -586,7 +606,8 @@ export default function PartyRoom() {
   const host = room.hostId === user.id;
   const round = state.round;
   const phase = state.phase;
-  const active = ["INPUT", "RACING"].includes(phase);
+  const active = ["INPUT", "RACING", "FORBIDDEN"].includes(phase);
+  const forbiddenSession = round?.gameType === "FORBIDDEN_WORD";
   const between = ["LOBBY", "RESULTS"].includes(phase);
   const disabled = pending || !connected;
   const observer = active && !round.participantIds.includes(user.id);
@@ -604,16 +625,20 @@ export default function PartyRoom() {
   });
   const lastRound = state.roundNumber >= state.config.totalRounds;
   const nextLabel =
-    phase === "LOBBY"
-      ? `เริ่มด้วย: ${gameLabels[state.config.gameType]?.[0]} · ${state.config.totalRounds} ตา`
-      : `ตาถัดไป ${state.roundNumber + 1}/${state.config.totalRounds} · ${gameLabels[state.config.gameType]?.[0]}`;
+    state.config.gameType === "FORBIDDEN_WORD"
+      ? `คำต้องห้าม · ${state.forbiddenConfig?.durationMinutes ? `${state.forbiddenConfig.durationMinutes} นาที` : "เล่นจนเจ้าวงกดจบ"}`
+      : phase === "LOBBY"
+        ? `เริ่มด้วย: ${gameLabels[state.config.gameType]?.[0]} · ${state.config.totalRounds} ตา`
+        : `ตาถัดไป ${state.roundNumber + 1}/${state.config.totalRounds} · ${gameLabels[state.config.gameType]?.[0]}`;
   const actionIsCurrent =
     roomAction &&
     roomAction.phase === phase &&
     roomAction.roundId === round?.id;
 
   return (
-    <div className={`party-workspace ${between ? "has-action-dock" : ""}`}>
+    <div
+      className={`party-workspace ${between ? "has-action-dock" : phase === "FORBIDDEN" ? "has-forbidden-dock" : ""}`}
+    >
       <header className="room-nav">
         <Link to="/" className="wordmark">
           <span className="brand-symbol">
@@ -648,13 +673,22 @@ export default function PartyRoom() {
         </div>
       )}
       {phase === "FINISHED" ? (
-        <Summary
-          state={state}
-          host={host}
-          command={command}
-          disabled={disabled}
-          code={code}
-        />
+        forbiddenSession ? (
+          <ForbiddenSummary
+            state={state}
+            command={command}
+            disabled={disabled}
+            host={host}
+          />
+        ) : (
+          <Summary
+            state={state}
+            host={host}
+            command={command}
+            disabled={disabled}
+            code={code}
+          />
+        )
       ) : (
         <>
           <div className="room-heading">
@@ -664,7 +698,9 @@ export default function PartyRoom() {
                   ? "GATHER YOUR PEOPLE."
                   : phase === "PAUSED"
                     ? "TAKE YOUR TIME."
-                    : `ROUND ${String(state.roundNumber).padStart(2, "0")} / ${String(state.config.totalRounds).padStart(2, "0")}`}
+                    : forbiddenSession
+                      ? "WORD HUNT · เปลี่ยนคำทุก 180 วินาที"
+                      : `ROUND ${String(state.roundNumber).padStart(2, "0")} / ${String(state.config.totalRounds).padStart(2, "0")}`}
               </span>
               <h1>
                 {phase === "LOBBY"
@@ -678,18 +714,22 @@ export default function PartyRoom() {
                   ? "ชวนเพื่อนเข้ามา แล้วกดพร้อมก่อนเริ่มเล่น"
                   : phase === "PAUSED"
                     ? "กินข้าว คุยกันก่อน กลับมาเมื่อพร้อม"
-                    : observer
-                      ? "คุณเข้ามาระหว่างรอบ · ดูเพื่อนเล่น แล้วเริ่มรอบหน้าได้เลย"
-                      : phase === "INPUT"
-                        ? round.mode === "MATCH"
-                          ? "เลือกให้ตรงกัน โดยไม่บอกกันก่อน · ใจตรงกันรอดทั้งคู่"
-                          : games.find((g) => g.type === currentType)?.rule
-                        : phase === "RACING"
-                          ? "เชียร์ตัวโปรดไปพร้อมกัน"
-                          : "เฉลยแล้ว คุยกันก่อนเล่นต่อได้เลย"}
+                    : phase === "FORBIDDEN"
+                      ? "เห็นคำเพื่อน แต่ไม่เห็นคำตัวเอง · เปลี่ยนคำทุก 180 วินาที"
+                      : observer
+                        ? "คุณเข้ามาระหว่างรอบ · ดูเพื่อนเล่น แล้วเริ่มรอบหน้าได้เลย"
+                        : phase === "INPUT"
+                          ? round.mode === "MATCH"
+                            ? "เลือกให้ตรงกัน โดยไม่บอกกันก่อน · ใจตรงกันรอดทั้งคู่"
+                            : games.find((g) => g.type === currentType)?.rule
+                          : phase === "RACING"
+                            ? "เชียร์ตัวโปรดไปพร้อมกัน"
+                            : "เฉลยแล้ว คุยกันก่อนเล่นต่อได้เลย"}
               </p>
             </div>
-            {active && <RoundTimer now={now} round={round} phase={phase} />}
+            {active && phase !== "FORBIDDEN" && (
+              <RoundTimer now={now} round={round} phase={phase} />
+            )}
           </div>
           <div className={`room-layout ${active ? "is-playing" : ""}`}>
             <main className="room-main">
@@ -730,6 +770,7 @@ export default function PartyRoom() {
                   {host ? (
                     <Settings
                       config={state.config}
+                      forbiddenConfig={state.forbiddenConfig}
                       games={games}
                       command={command}
                       disabled={disabled}
@@ -744,7 +785,9 @@ export default function PartyRoom() {
                         <span>คืนนี้เริ่มด้วย</span>
                         <h3>{gameLabels[state.config.gameType]?.[0]}</h3>
                         <p>
-                          {state.config.totalRounds} รอบ · เจ้าวงเลือกให้แล้ว
+                          {state.config.gameType === "FORBIDDEN_WORD"
+                            ? "เปลี่ยนคำทุก 180 วินาที · รับคำใหม่ได้เมื่อโดนจับ"
+                            : `${state.config.totalRounds} รอบ · เจ้าวงเลือกให้แล้ว`}
                         </p>
                       </div>
                     </div>
@@ -766,6 +809,17 @@ export default function PartyRoom() {
                     </button>
                   ) : (
                     <p className="dim">รอเจ้าวงเปิดเล่นต่อ</p>
+                  )}
+                  {host && forbiddenSession && (
+                    <button
+                      className="text-button"
+                      disabled={disabled}
+                      onClick={() =>
+                        setRoomAction({ type: "END", roundId: round.id, phase })
+                      }
+                    >
+                      จบวงและดูสรุป
+                    </button>
                   )}
                 </div>
               )}
@@ -836,6 +890,18 @@ export default function PartyRoom() {
                     )}
                 </>
               )}
+              {phase === "FORBIDDEN" && (
+                <ForbiddenGame
+                  state={state}
+                  members={members}
+                  userId={user.id}
+                  host={host}
+                  now={now}
+                  disabled={disabled}
+                  connected={connected}
+                  command={command}
+                />
+              )}
               {phase === "RACING" && (
                 <Race
                   round={round}
@@ -858,6 +924,7 @@ export default function PartyRoom() {
                       <summary>เปลี่ยนเกมหรือคำถามตาถัดไป</summary>
                       <Settings
                         config={state.config}
+                        forbiddenConfig={state.forbiddenConfig}
                         games={games}
                         command={command}
                         disabled={disabled}
@@ -868,7 +935,7 @@ export default function PartyRoom() {
               )}
               {host && phase !== "PAUSED" && (
                 <div className="host-controls">
-                  {between && (
+                  {(between || phase === "FORBIDDEN") && (
                     <button
                       className="text-button"
                       disabled={disabled}
@@ -878,7 +945,7 @@ export default function PartyRoom() {
                       พักวง
                     </button>
                   )}
-                  {active && (
+                  {active && phase !== "FORBIDDEN" && (
                     <button
                       className="text-button"
                       disabled={disabled}
@@ -952,9 +1019,11 @@ export default function PartyRoom() {
           description={
             roomAction.type === "SKIP"
               ? "รอบนี้จะไม่คิดคะแนน ทุกคนจะไปหน้าผลและเตรียมตาถัดไปได้"
-              : active
-                ? "รอบที่กำลังเล่นจะไม่คิดคะแนน และทุกคนจะไปหน้าสรุปคืนนี้"
-                : "ทุกคนจะไปหน้าสรุปคะแนนและโมเมนต์ของคืนนี้"
+              : forbiddenSession
+                ? "เก็บคะแนนนักล่าและจำนวนโดนจับ แล้วพาทุกคนไปหน้าสรุป ไม่คิดโทษเพิ่ม"
+                : active
+                  ? "รอบที่กำลังเล่นจะไม่คิดคะแนน และทุกคนจะไปหน้าสรุปคืนนี้"
+                  : "ทุกคนจะไปหน้าสรุปคะแนนและโมเมนต์ของคืนนี้"
           }
           actionLabel={
             roomAction.type === "SKIP" ? "ยืนยันข้ามรอบ" : "ยืนยันจบวง"

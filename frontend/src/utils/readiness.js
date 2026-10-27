@@ -52,7 +52,19 @@ export const readinessLabels = {
 
 export function playerStatus(member, state, hostId) {
   if (!member.online) return "หลุด · รอกลับมา";
-  if (["INPUT", "RACING"].includes(state.phase))
+  if (state.phase === "FORBIDDEN") {
+    const a = state.round.assignments[member.id];
+    return !a
+      ? "รอรับคำเข้าวง"
+      : a.resting
+        ? "พักชั่วคราว"
+        : a.status === "HIT"
+          ? "โดนแล้ว · รอคำใหม่"
+          : a.status === "WAITING_WORDS"
+            ? "รอเพิ่มคำ"
+            : "ถือคำอยู่ · กำลังเล่น";
+  }
+  if (["INPUT", "RACING", "FORBIDDEN"].includes(state.phase))
     return state.round.participantIds.includes(member.id)
       ? "กำลังเล่นรอบนี้"
       : "ดูรอบนี้ · เล่นตาถัดไป";

@@ -33,6 +33,15 @@ const games = [
     tag: "3–10 คน",
     color: "lavender",
   },
+  {
+    icon: "secret",
+    n: "04",
+    title: "ใครเผลอพูด คนนั้นโดน",
+    name: "คำต้องห้ามประจำตัว",
+    copy: "เห็นคำเพื่อน ซ่อนคำตัวเอง · Custom หมวด จับแล้วรับคำใหม่เล่นต่อ",
+    tag: "2–10 คน",
+    color: "sage",
+  },
 ];
 
 export default function PartyHome() {
@@ -279,7 +288,7 @@ export default function PartyHome() {
               </h2>
             </div>
             <p>
-              สามเกม สามจังหวะ
+              สี่เกม หลายจังหวะ
               <br />
               สแกน เลือก เล่น แล้วเงยหน้ามาแซวกัน
             </p>

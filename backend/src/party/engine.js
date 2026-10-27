@@ -2,8 +2,28 @@ import { randomUUID } from "node:crypto";
 import { simulateRace } from "../utils/horseEngine.js";
 import { pickQuestion } from "./questions.js";
 import { makeHorseField, makeGurus, presentHorse } from "./horseField.js";
+import {
+  ensureForbiddenConfig,
+  startForbidden,
+  advanceForbidden,
+  configureForbidden,
+  forbiddenCommand,
+  forbiddenResult,
+  projectForbidden,
+  pauseForbidden,
+  resumeForbidden,
+} from "./forbiddenWords.js";
 
 export const GAMES = [
+  {
+    type: "FORBIDDEN_WORD",
+    name: "คำต้องห้ามประจำตัว",
+    subtitle: "หลอกให้หลุด จับแล้วเปลี่ยนคำเล่นต่อ",
+    minPlayers: 2,
+    maxPlayers: 10,
+    icon: "secret",
+    rule: "เห็นคำเพื่อน แต่ไม่เห็นคำตัวเอง · คำเปลี่ยนทุก 180 วินาที · จับได้ดื่ม 1 ครั้ง",
+  },
   {
     type: "MIXED",
     name: "เล่นผสม",
@@ -42,7 +62,7 @@ export const GAMES = [
   },
 ];
 
-const ACTIVE = ["INPUT", "RACING"];
+const ACTIVE = ["INPUT", "RACING", "FORBIDDEN"];
 export const fail = (message, code = "INVALID_ACTION") => {
   const err = new Error(message);
   err.code = code;
@@ -75,13 +95,38 @@ function points(state, id, game, amount, wins = 0) {
     wins: 0,
     played: 0,
   });
-  row[game] += amount;
+  row[game] = (row[game] || 0) + amount;
   row.wins += wins;
   row.played += 1;
 }
 
-function finish(state, now, skipped = false) {
+export function finish(state, now, skipped = false) {
   const round = state.round;
+  if (
+    round?.gameType === "FORBIDDEN_WORD" &&
+    (state.phase === "FORBIDDEN" ||
+      (state.phase === "PAUSED" && state.resumePhase === "FORBIDDEN"))
+  ) {
+    round.result = forbiddenResult(state);
+    for (const p of round.result.players) {
+      points(state, p.userId, round.gameType, p.points);
+      state.scores[p.userId].drinks =
+        (state.scores[p.userId].drinks || 0) + p.hits;
+    }
+    round.finishedAt = now;
+    state.history.push({
+      id: round.id,
+      number: state.roundNumber,
+      gameType: round.gameType,
+      title: round.result.title,
+      players: round.result.players,
+      skipped: false,
+    });
+    state.history = state.history.slice(-18);
+    state.phase = "FINISHED";
+    state.ready = [];
+    return;
+  }
   if (!round || !ACTIVE.includes(state.phase)) return;
   const results = [];
   if (skipped) {
@@ -237,6 +282,13 @@ function finish(state, now, skipped = false) {
 export function advanceState(state, now) {
   if (!state.round) return false;
   const round = state.round;
+  if (state.phase === "FORBIDDEN") {
+    if (round.endsAt && now >= round.endsAt) {
+      finish(state, now);
+      return true;
+    }
+    return advanceForbidden(state, now);
+  }
   if (state.phase === "INPUT" && now >= round.deadlineAt) {
     if (round.gameType === "HORSE_RACE") {
       const simulation = simulateRace(round.horses);
@@ -292,6 +344,10 @@ function startRound(state, ctx) {
     fail(`เกมนี้ต้องมีคนพร้อมอย่างน้อย ${game.minPlayers} คน`);
   if (available.some((p) => !state.ready.includes(p.id) && p.id !== ctx.hostId))
     fail("รอให้เพื่อนที่ออนไลน์กดพร้อม หรือให้เพื่อนกดพักก่อน");
+  if (type === "FORBIDDEN_WORD") {
+    startForbidden(state, participants, ctx.now);
+    return;
+  }
   state.roundNumber++;
   const startsAt = ctx.now + (type === "PANIC_JUMP" ? 3000 : 1000);
   const round = {
@@ -352,10 +408,23 @@ export function applyCommand(original, command, ctx) {
     "END",
     "RESET",
     "CLOSE_INPUT",
+    "FORBIDDEN_SETTINGS",
+    "FORBIDDEN_ADD_CATEGORY",
   ];
   if (hostOnly.includes(type) && ctx.hostId !== ctx.userId)
     fail("เฉพาะเจ้าวงเท่านั้น", "HOST_ONLY");
-  if (hostOnly.includes(type) && command.expectedRevision !== ctx.revision)
+  const liveWordControl =
+    state.round?.gameType === "FORBIDDEN_WORD" &&
+    ["END", "PAUSE", "RESUME"].includes(type);
+  if (liveWordControl && command.roundId !== state.round.id)
+    fail("เกมนี้เปลี่ยนไปแล้ว", "STALE_ROUND");
+  // Clock/prompt updates must not invalidate a confirmed control for this same
+  // continuous session. Ordinary game/config controls retain revision checks.
+  if (
+    hostOnly.includes(type) &&
+    !liveWordControl &&
+    command.expectedRevision !== ctx.revision
+  )
     fail("วงเปลี่ยนสถานะแล้ว ลองอีกครั้ง", "STALE_STATE");
   if (
     ["CHOOSE", "VOTE", "JUMP", "SKIP"].includes(type) &&
@@ -363,6 +432,18 @@ export function applyCommand(original, command, ctx) {
   )
     fail("รอบนี้จบไปแล้ว", "STALE_ROUND");
   switch (type) {
+    case "FORBIDDEN_SETTINGS":
+    case "FORBIDDEN_ADD_CATEGORY":
+      configureForbidden(state, command, ctx);
+      break;
+    case "FORBIDDEN_JOIN":
+    case "FORBIDDEN_KILL":
+    case "FORBIDDEN_RESET":
+    case "FORBIDDEN_REST":
+    case "FORBIDDEN_REVIEW":
+    case "FORBIDDEN_VOID":
+      forbiddenCommand(state, command, ctx);
+      break;
     case "CUSTOM_QUESTION":
       if (!["LOBBY", "RESULTS"].includes(state.phase))
         fail("เขียนคำถามได้ระหว่างรอบ");
@@ -397,6 +478,7 @@ export function applyCommand(original, command, ctx) {
         totalRounds: command.totalRounds,
         category: command.category,
       };
+      if (command.gameType === "FORBIDDEN_WORD") ensureForbiddenConfig(state);
       break;
     }
     case "READY":
@@ -472,20 +554,32 @@ export function applyCommand(original, command, ctx) {
       break;
     }
     case "PAUSE":
-      if (!["LOBBY", "RESULTS"].includes(state.phase))
+      if (!["LOBBY", "RESULTS", "FORBIDDEN"].includes(state.phase))
         fail("พักวงได้หลังเฉลย หรือข้ามรอบก่อน");
+      if (state.phase === "FORBIDDEN") pauseForbidden(state, ctx.now);
       state.resumePhase = state.phase;
       state.phase = "PAUSED";
       break;
     case "RESUME":
       if (state.phase !== "PAUSED") fail("วงไม่ได้พักอยู่");
+      if (state.resumePhase === "FORBIDDEN") resumeForbidden(state, ctx.now);
       state.phase = state.resumePhase || "LOBBY";
       break;
     case "SKIP":
+      if (state.phase === "FORBIDDEN")
+        fail("เกมคำต้องห้ามใช้ปุ่มจบเกมเพื่อเก็บผล");
       if (!ACTIVE.includes(state.phase)) fail("ไม่มีรอบให้ข้าม");
       finish(state, ctx.now, true);
       break;
     case "END":
+      if (
+        state.round?.gameType === "FORBIDDEN_WORD" &&
+        (state.phase === "FORBIDDEN" ||
+          (state.phase === "PAUSED" && state.resumePhase === "FORBIDDEN"))
+      ) {
+        finish(state, ctx.now);
+        break;
+      }
       if (ACTIVE.includes(state.phase)) finish(state, ctx.now, true);
       state.phase = "FINISHED";
       break;
@@ -494,6 +588,7 @@ export function applyCommand(original, command, ctx) {
       const fresh = initialState();
       fresh.config = state.config;
       fresh.profiles = state.profiles;
+      if (state.forbiddenConfig) fresh.forbiddenConfig = state.forbiddenConfig;
       Object.assign(state, fresh);
       break;
     }
@@ -509,6 +604,8 @@ export function applyCommand(original, command, ctx) {
 // millisecond jump ordering. Private runtime never leaves the server wholesale.
 export function projectState(state, userId) {
   const result = structuredClone(state || initialState());
+  if (result.config.gameType === "FORBIDDEN_WORD")
+    ensureForbiddenConfig(result);
   delete result.commands;
   delete result.seen;
   if (result.round) {
@@ -539,5 +636,6 @@ export function projectState(state, userId) {
       delete round.actions;
     }
   }
+  projectForbidden(result, userId);
   return result;
 }

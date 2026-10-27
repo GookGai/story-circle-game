@@ -34,6 +34,14 @@ repositories {
     }
 }
 
+// Error Prone annotations are compile-time Java tooling, not Android runtime classes.
+// In particular IncompatibleModifiers references javax.lang.model, absent on Android.
+configurations.configureEach {
+    if (name.toLowerCase().contains('androidtest')) {
+        exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

@@ -1,0 +1,27 @@
+.native-connection {
+  position: fixed;
+  z-index: 200;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #faf6ed;
+  color: #20211d;
+  box-shadow: 0 2px 12px #0003;
+  font-size: 12px;
+}
+.native-connection button {
+  min-height: 44px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #20211d;
+  color: #faf6ed;
+  font: inherit;
+}
+.app-return { margin-bottom: 12px; }

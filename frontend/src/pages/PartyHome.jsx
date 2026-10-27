@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { api } from "../utils/api";
 import { AVATARS, getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
+import { isNativeApp } from "../utils/platform";
 
 const games = [
   {
@@ -72,7 +73,7 @@ export default function PartyHome() {
     api
       .get("/api/rooms/my/rooms")
       .then((data) =>
-        setRooms(data.rooms.filter((r) => r.status !== "FINISHED").slice(0, 3)),
+        setRooms(data.rooms.filter((r) => r.status !== "FINISHED").sort((a, b) => Number(b.code === localStorage.getItem('party-last-room')) - Number(a.code === localStorage.getItem('party-last-room'))).slice(0, 3)),
       )
       .catch(() => {});
   }, [user]);
@@ -223,8 +224,9 @@ export default function PartyHome() {
               เกมสั้น ๆ ที่ทำให้ทั้งโต๊ะสนุกไปด้วยกัน
             </p>
             <div className="hero-actions hero-enter">
+              {isNativeApp && rooms[0] && <Link className="p-button primary app-return" to={`/room/${rooms[0].code}`}>เล่นวงเดิมต่อ · {rooms[0].code} <Icon name="arrow" size={20} /></Link>}
               <button
-                className="p-button primary"
+                className={`p-button ${isNativeApp && rooms[0] ? 'translucent' : 'primary'}`}
                 onClick={() => open("create")}
                 disabled={authLoading}
               >

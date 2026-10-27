@@ -10,6 +10,9 @@ import { HorseInput, Race, HorseResults } from "../components/HorseGame";
 
 import { ReadyDock, ReadyRollCall } from "../components/ReadyControls";
 import RoomConfirmation from "../components/RoomConfirmation";
+import { publicOrigin, isNativeApp } from "../utils/platform";
+import { roomInviteUrl } from "../utils/appLinks.mjs";
+import { Share } from "@capacitor/share";
 import { readiness, playerStatus } from "../utils/readiness";
 import {
   ForbiddenGame,
@@ -37,7 +40,7 @@ function Invite({ code }) {
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const url = `${window.location.origin}/join/${code}`;
+  const url = roomInviteUrl(code, publicOrigin);
   useEffect(() => {
     let active = true;
     QRCode.toDataURL(url, {
@@ -83,6 +86,10 @@ function Invite({ code }) {
         {copied ? "คัดลอกลิงก์แล้ว" : "คัดลอกลิงก์ชวนเพื่อน"}
       </button>
       {error && <p role="status">{error}</p>}
+      {isNativeApp && <button className="p-button outline full" onClick={async () => {
+        try { await Share.share({ title: 'เข้าวง Story Circle', text: `มาเล่นด้วยกัน · รหัส ${code}`, url }); }
+        catch { /* Dismissing the share sheet leaves the invitation visible. */ }
+      }}>แชร์ลิงก์ชวนเพื่อน</button>}
     </section>
   );
 }
@@ -453,9 +460,10 @@ function Summary({ state, host, command, disabled, code }) {
       .filter((r) => !r.skipped)
       .slice(-3)
       .map((r) => `• ${r.title}`)
-      .join("\n")}\nมาเปิดวงกันที่ ${location.origin}`;
+      .join("\n")}\nมาเปิดวงกันที่ ${publicOrigin}`;
     try {
-      if (navigator.share)
+      if (isNativeApp) await Share.share({ title: "Story Circle · เรื่องของคืนนี้", text });
+      else if (navigator.share)
         await navigator.share({
           title: "Story Circle · เรื่องของคืนนี้",
           text,

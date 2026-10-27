@@ -57,6 +57,7 @@ export function useParty(code) {
     };
     document.addEventListener("visibilitychange", visible);
     window.addEventListener("online", sync);
+    window.addEventListener("storycircle:resume", sync);
     sync();
     return () => {
       socket.off("party:state", accept);
@@ -64,6 +65,7 @@ export function useParty(code) {
       socket.off("party:left", left);
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("online", sync);
+      window.removeEventListener("storycircle:resume", sync);
     };
   }, [socket, accept, sync, navigate]);
   const command = useCallback(

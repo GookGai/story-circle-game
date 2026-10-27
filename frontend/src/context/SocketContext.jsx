@@ -50,10 +50,13 @@ export function SocketProvider({ children }) {
     });
 
     socketRef.current = newSocket;
+    const resume = () => { if (!newSocket.connected) newSocket.connect(); };
+    window.addEventListener("storycircle:resume", resume);
     setSocket(newSocket);
 
     // Cleanup on unmount or auth change
     return () => {
+      window.removeEventListener("storycircle:resume", resume);
       newSocket.disconnect();
       socketRef.current = null;
       setSocket(null);

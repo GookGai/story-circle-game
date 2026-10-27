@@ -1,0 +1,13 @@
+{
+  "appId": "com.storycircle.game",
+  "appName": "Story Circle",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#171815",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

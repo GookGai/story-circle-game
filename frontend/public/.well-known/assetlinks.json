@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.storycircle.game",
+      "sha256_cert_fingerprints": ["72:4A:F4:56:4D:E4:94:5C:0B:E4:69:96:9B:6C:F9:DC:84:E1:23:71:54:F6:1F:0B:FF:5B:09:09:7E:71:A7:26"]
+    }
+  }
+]

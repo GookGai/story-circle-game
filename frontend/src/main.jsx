@@ -10,6 +10,7 @@ import "./mobile.css";
 import "./horse.css";
 import "./ready.css";
 import "./forbidden.css";
+import "./native.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

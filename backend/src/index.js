@@ -49,7 +49,7 @@ const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
 const corsOptions = {
   // `origin: true` reflects the caller and remains compatible with credentials.
   // A literal "*" plus credentials is rejected by browsers.
-  origin: configuredOrigins.includes("*") ? true : configuredOrigins,
+  origin: configuredOrigins.includes("*") ? true : [...configuredOrigins, "https://localhost"],
   credentials: true,
 };
 
@@ -93,6 +93,7 @@ app.get("/health/ready", async (_req, res) => {
 // Serve the Vite build from the same process and origin as API and sockets.
 const frontendDir = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
 if (existsSync(path.join(frontendDir, "index.html"))) {
+  app.use('/.well-known', express.static(path.join(frontendDir, '.well-known'), { dotfiles: 'allow', maxAge: 0 }));
   app.use("/assets", express.static(path.join(frontendDir, "assets"), {
     maxAge: "1y", immutable: true,
   }));

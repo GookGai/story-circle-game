@@ -11,6 +11,7 @@ import { useAuth } from "./hooks/useAuth";
 import PartyHome from "./pages/PartyHome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import NativeBridge from "./components/NativeBridge";
 
 const PartyRoom = lazy(() => import("./pages/PartyRoom"));
 function RoomRoute() {
@@ -32,6 +33,7 @@ export default function App() {
   const { pathname } = useLocation();
   return (
     <>
+      <NativeBridge />
       <Suspense
         fallback={
           <div className="party-loading">
@@ -40,8 +42,8 @@ export default function App() {
         }
       >
         <Routes>
-          <Route path="/" element={<PartyHome />} />
-          <Route path="/join/:code" element={<PartyHome />} />
+          <Route path="/" element={<PartyHome key={pathname} />} />
+          <Route path="/join/:code" element={<PartyHome key={pathname} />} />
           <Route path="/room/:code" element={<RoomRoute />} />
           <Route path="/game/:game/:code" element={<RoomRoute />} />
           <Route path="/lobby" element={<LobbyRedirect />} />

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { search } = useLocation();
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +23,7 @@ export default function Login() {
 
     try {
       await login(username.trim(), password);
-      navigate('/lobby', { replace: true });
+      navigate(new URLSearchParams(search).get('next') === 'admin' ? '/admin' : '/lobby', { replace: true });
     } catch (err) {
       setError(err.message || 'เข้าสู่ระบบไม่สำเร็จ');
     } finally {

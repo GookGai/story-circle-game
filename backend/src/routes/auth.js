@@ -8,6 +8,9 @@ import jwt from "jsonwebtoken";
 import prisma from "../utils/prisma.js";
 import { authenticate } from "../middleware/auth.js";
 import { randomBytes } from "node:crypto";
+import { isAdminUser, isReservedAdminUsername } from '../utils/adminPolicy.js';
+import { recordUsage, rememberUsageUser } from '../usage/store.js';
+import { sourceOf } from '../usage/policy.js';
 
 const router = Router();
 
@@ -26,8 +29,9 @@ function generateToken(user) {
  * Strip password from user object before sending to client
  */
 function sanitizeUser(user) {
+  rememberUsageUser(user);
   const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  return { ...userWithoutPassword, isAdmin: isAdminUser(user) };
 }
 
 // ─── POST /guest ─────────────────────────────────────────────────────────────
@@ -64,6 +68,7 @@ router.post("/guest", async (req, res) => {
     });
 
     const token = generateToken(user);
+    recordUsage({ type: 'ACCOUNT_CREATED', user, source: sourceOf(req) });
 
     res.status(201).json({
       token,
@@ -103,6 +108,7 @@ router.post("/register", async (req, res) => {
     if (existingUser) {
       return res.status(409).json({ error: "Username นี้ถูกใช้แล้ว" });
     }
+    if (isReservedAdminUsername(username)) return res.status(403).json({ error: 'ชื่อบัญชีนี้สงวนไว้สำหรับผู้ดูแล' });
 
     // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -115,6 +121,7 @@ router.post("/register", async (req, res) => {
     });
 
     const token = generateToken(user);
+    recordUsage({ type: 'ACCOUNT_CREATED', user, source: sourceOf(req) });
 
     res.status(201).json({
       token,
@@ -158,6 +165,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = generateToken(user);
+    recordUsage({ type: 'LOGIN', user, source: sourceOf(req) });
 
     res.json({
       token,

@@ -14,6 +14,7 @@ import Register from "./pages/Register";
 import NativeBridge from "./components/NativeBridge";
 
 const PartyRoom = lazy(() => import("./pages/PartyRoom"));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 function RoomRoute() {
   const { user, loading } = useAuth();
   const { code } = useParams();
@@ -42,6 +43,7 @@ export default function App() {
         }
       >
         <Routes>
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/" element={<PartyHome key={pathname} />} />
           <Route path="/join/:code" element={<PartyHome key={pathname} />} />
           <Route path="/room/:code" element={<RoomRoute />} />

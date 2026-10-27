@@ -4,6 +4,8 @@ import prisma from "../utils/prisma.js";
 import { authenticate } from "../middleware/auth.js";
 import { GAMES, initialState, displayName } from "../party/engine.js";
 import { joinRoom } from "../party/service.js";
+import { recordUserUsage } from '../usage/store.js';
+import { sourceOf } from '../usage/policy.js';
 
 const router = Router();
 const playerInclude = {
@@ -94,6 +96,7 @@ router.post("/", authenticate, async (req, res) => {
         },
         include: playerInclude,
       });
+      recordUserUsage(user.id, { type: 'ROOM_CREATED', roomCode: code, gameType, source: sourceOf(req) });
       return res.status(201).json({ room: roomView(room) });
     } catch (error) {
       if (error.code === "P2002") continue;
@@ -115,7 +118,7 @@ router.get("/my/rooms", authenticate, async (req, res) => {
 
 router.post("/:code/join", authenticate, async (req, res) => {
   try {
-    const room = await joinRoom(req.params.code, req.user.id);
+    const room = await joinRoom(req.params.code, req.user.id, sourceOf(req));
     res.json({ success: true, room: roomView(room) });
   } catch (error) {
     res

@@ -1,5 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { authenticateSocket } from "../middleware/auth.js";
+import { recordUserUsage } from '../usage/store.js';
+import { sourceOf } from '../usage/policy.js';
 import {
   nextForbiddenDeadline,
   removeForbiddenMember,
@@ -22,6 +24,9 @@ const include = {
   },
 };
 let io;
+export function onlineUserCount() {
+  return new Set([...(io?.sockets.sockets.values() || [])].map(socket => socket.user?.id).filter(Boolean)).size;
+}
 const timers = new Map();
 const hostTimers = new Map();
 const queues = new Map();
@@ -124,8 +129,10 @@ async function mutateTransaction(code, work) {
   }
 }
 
-export async function joinRoom(code, userId) {
-  return mutateRoom(code, async ({ tx, room, state }) => {
+export async function joinRoom(code, userId, source = 'WEB') {
+  let joined = false;
+  const result = await mutateRoom(code, async ({ tx, room, state }) => {
+    joined = !room.players.some((p) => p.userId === userId);
     if (!room.players.some((p) => p.userId === userId)) {
       if (room.players.length >= Math.min(room.maxPlayers, 10))
         fail("วงนี้เต็มแล้ว (สูงสุด 10 คน)", "ROOM_FULL");
@@ -142,6 +149,8 @@ export async function joinRoom(code, userId) {
     }
     return { state };
   });
+  if (joined) recordUserUsage(userId, { type: 'ROOM_JOINED', roomCode: result.code, gameType: result.runtime?.config?.gameType, source });
+  return result;
 }
 
 function snapshot(room, userId) {
@@ -302,6 +311,8 @@ export function initializeParty(server) {
   io = server;
   io.use(authenticateSocket);
   io.on("connection", (socket) => {
+    const usageSource = sourceOf(socket.handshake);
+    recordUserUsage(socket.user.id, { type: 'CONNECTED', source: usageSource });
     let events = 0;
     const window = setInterval(() => {
       events = 0;
@@ -311,6 +322,7 @@ export function initializeParty(server) {
     const answerError = (callback, error) => {
       const known =
         typeof error.code === "string" && !error.code.startsWith("P");
+      if (error.code !== 'STALE_STATE') recordUserUsage(socket.user.id, { type: 'ERROR', errorCode: known ? error.code : 'SERVER_ERROR', source: usageSource });
       callback?.({
         ok: false,
         code: known ? error.code : "SERVER_ERROR",
@@ -322,7 +334,7 @@ export function initializeParty(server) {
         if (limited()) fail("ส่งคำสั่งถี่เกินไป รอสักครู่");
         if (typeof code !== "string" || !/^[A-Z0-9]{6}$/i.test(code))
           fail("รหัสวงต้องมี 6 ตัว");
-        const room = await joinRoom(code, socket.user.id);
+        const room = await joinRoom(code, socket.user.id, usageSource);
         // One active room per browser connection; another tab may join elsewhere.
         for (const previous of socket.rooms)
           if (previous !== socket.id && previous !== room.id)
@@ -343,11 +355,15 @@ export function initializeParty(server) {
           !/^[A-Z0-9]{6}$/i.test(input.code)
         )
           fail("รหัสวงไม่ถูกต้อง");
+        let activity = null;
         const room = await mutateRoom(
           input.code,
           ({ room, state, members }) => {
+            activity = null;
             if (!socket.rooms.has(room.id))
               fail("กลับเข้าวงก่อนส่งคำสั่ง", "NOT_MEMBER");
+            const previousRound = state.round?.id;
+            const previousPhase = state.phase;
             const result = applyCommand(state, input, {
               userId: socket.user.id,
               hostId: room.hostId,
@@ -355,11 +371,18 @@ export function initializeParty(server) {
               revision: room.revision,
               now: Date.now(),
             });
+            if (result.changed) {
+              if (['START', 'NEXT'].includes(input.type) && result.state.round?.id !== previousRound) activity = 'GAME_STARTED';
+              else if (result.state.phase === 'FINISHED' && previousPhase !== 'FINISHED') activity = 'GAME_ENDED';
+              else if (input.type === 'PAUSE') activity = 'GAME_PAUSED';
+              else if (input.type === 'RESUME') activity = 'GAME_RESUMED';
+            }
             return result.changed
               ? { state: result.state }
               : { unchanged: true };
           },
         );
+        if (activity) recordUserUsage(socket.user.id, { type: activity, roomCode: room.code, gameType: room.runtime?.round?.gameType || room.runtime?.config?.gameType, source: usageSource });
         await publish(room);
         callback?.({ ok: true, snapshot: snapshot(room, socket.user.id) });
       } catch (error) {
@@ -369,7 +392,8 @@ export function initializeParty(server) {
     socket.on("party:leave", async (code, callback) => {
       try {
         if (limited()) fail("ส่งคำสั่งถี่เกินไป");
-        await leaveRoom(code, socket.user.id);
+        const room = await leaveRoom(code, socket.user.id);
+        recordUserUsage(socket.user.id, { type: 'ROOM_LEFT', roomCode: room.code, gameType: room.runtime?.config?.gameType, source: usageSource });
         callback?.({ ok: true });
       } catch (error) {
         answerError(callback, error);
@@ -389,7 +413,10 @@ export function initializeParty(server) {
         }
       }, 100).unref();
     });
-    socket.on("disconnect", () => clearInterval(window));
+    socket.on("disconnect", () => {
+      clearInterval(window);
+      recordUserUsage(socket.user.id, { type: 'DISCONNECTED', source: usageSource });
+    });
   });
   // A restart must resume persisted deadlines even if no host reconnects.
   const recover = async () => {

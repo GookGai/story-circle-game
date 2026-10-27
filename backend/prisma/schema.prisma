@@ -10,6 +10,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Operational history survives normal guest/room cleanup; no secret game payloads.
+model UsageEvent {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String?
+  username  String?
+  isGuest   Boolean  @default(false)
+  type      String   @db.VarChar(32)
+  roomCode  String?  @db.VarChar(6)
+  gameType  String?  @db.VarChar(32)
+  source    String   @default("WEB") @db.VarChar(12)
+  errorCode String?  @db.VarChar(40)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum RoomStatus {

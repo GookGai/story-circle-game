@@ -186,6 +186,7 @@ export default function PartyHome() {
           story circle.
         </Link>
         <div className="nav-actions">
+          {user?.isAdmin && <Link className="text-button" to="/admin">Dashboard</Link>}
           {user ? (
             <button
               className="text-button"

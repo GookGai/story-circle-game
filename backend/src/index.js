@@ -22,6 +22,9 @@ import prisma from "./utils/prisma.js";
 import authRoutes from "./routes/auth.js";
 import roomRoutes from "./routes/rooms.js";
 import statsRoutes from "./routes/stats.js";
+import adminRoutes from './routes/admin.js';
+import { recordUsage, recordUserUsage, startUsage } from './usage/store.js';
+import { sourceOf } from './usage/policy.js';
 import { GAMES } from "./party/engine.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 
@@ -54,6 +57,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use('/api', (req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode < 500) return;
+    const event = { type: 'ERROR', errorCode: `HTTP_${res.statusCode}`, source: sourceOf(req) };
+    if (req.user?.id) recordUserUsage(req.user.id, event);
+    else recordUsage(event);
+  });
+  next();
+});
 
 // ─── Body Parsing ────────────────────────────────────────────────────────────
 
@@ -66,6 +78,7 @@ app.use('/api/rooms', rateLimit({ limit: 240, windowMs: 60 * 1000 }));
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/stats", statsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Game registry endpoint — returns all available game types
 app.get("/api/games", (_req, res) => {
@@ -112,6 +125,7 @@ const io = new Server(httpServer, {
 
 // Initialize all socket event handlers
 initializeParty(io);
+const stopUsage = startUsage();
 
 app.use((error, _req, res, _next) => {
   console.error('Request failed:', error.code || error.message);
@@ -142,6 +156,7 @@ function shutdown() {
   const deadline = setTimeout(() => process.exit(1), 10000);
   deadline.unref();
   io.close(async () => {
+    await stopUsage();
     await prisma.$disconnect();
     clearTimeout(deadline);
     process.exit(0);

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 cd "$(dirname "$0")/../android"
-ANDROID_NATIVE_TEST=true ./gradlew --no-daemon connectedReleaseAndroidTest
+./gradlew --no-daemon connectedDebugAndroidTest
 test_result=$?
 mkdir -p ../../artifacts/screenshots
 adb pull /sdcard/Android/data/com.storycircle.game/files/. ../../artifacts/screenshots/ || true
-exit "$test_result"
+if [ "$test_result" -ne 0 ]; then exit "$test_result"; fi
+# Verify the minified release independently of the instrumentation class loader.
+adb install -r app/build/outputs/apk/release/app-release.apk
+python3 ../scripts/test-release-ui.py

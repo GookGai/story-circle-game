@@ -76,11 +76,11 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Prepare minified app and instrumentation APK before booting emulator
+      - name: Prepare release app and functional test APK before booting emulator
         working-directory: frontend/android
         run: |
           chmod +x gradlew
-          ANDROID_NATIVE_TEST=true ./gradlew --no-daemon assembleRelease assembleReleaseAndroidTest
+          ANDROID_NATIVE_TEST=true ./gradlew --no-daemon assembleRelease assembleDebug assembleDebugAndroidTest
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -97,5 +97,4 @@ jobs:
             artifacts/screenshots/
             frontend/android/app/build/reports/androidTests/
             frontend/android/app/build/outputs/androidTest-results/
-            frontend/android/app/build/outputs/mapping/releaseAndroidTest/missing_rules.txt
           retention-days: 14

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** Exercises the actual bundled, minified release WebView and native App plugin. */
+/** Exercises the bundled UI, native invitations, authentication and reconnects. */
 @RunWith(AndroidJUnit4.class)
 public class AppLaunchTest {
     private static final String WEB = "https://striking-sparkle-production-adf7.up.railway.app";

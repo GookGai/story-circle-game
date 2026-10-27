@@ -1,8 +1,6 @@
 # Add project specific ProGuard rules here.
 -keep @interface com.getcapacitor.**
 -keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault
-# AndroidX instrumentation loads this shared runtime from the target application.
--keep class kotlin.jvm.internal.Intrinsics { *; }
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 #

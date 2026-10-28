@@ -6,6 +6,10 @@ export function parachuteView(round, now) {
     : now >= landingAt ? 'LANDING' : now >= round.deadlineAt ? 'WATCHING' : 'FALLING';
   const duration = round.flightWindowMs || Math.max(1, round.jumpFlow === 2 ? 12000 : round.deadlineAt - round.startsAt);
   const opened = new Map((round.opened || []).map((p) => [p.userId, p.openedAt]));
+  if (round.result) {
+    opened.clear();
+    for (const p of round.result.players || []) if (!p.missed && p.order) opened.set(p.userId, round.startsAt);
+  }
   const ids = round.participantIds || [];
   const landing = phase === 'RESULTS' ? 1 : clamp((now - landingAt) / Math.max(1, revealAt - landingAt));
   const players = ids.map((id, index) => {

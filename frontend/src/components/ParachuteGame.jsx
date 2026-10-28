@@ -31,7 +31,7 @@ function Sky({ round, profiles, userId, model }) {
       </div>;
     })}</div>
     <div className="jump-ground" aria-hidden="true"><span>จุดลงจอด</span><i/><i/><i/></div>
-    <div className="jump-height-meter" aria-label={`ระยะตก ${Math.round(model.progress * 100)} เปอร์เซ็นต์`}><span style={{height:`${(1-model.progress)*100}%`}}/></div>
+    <div className="jump-height-meter" aria-label={`เวลาเลือกจังหวะผ่านไป ${Math.round(model.progress * 100)} เปอร์เซ็นต์`}><span style={{height:`${(1-model.progress)*100}%`}}/></div>
   </div>;
 }
 
@@ -49,11 +49,11 @@ export default function ParachuteGame({ round, now, profiles, userId, connected,
   const stageLabel = model.phase === 'PREPARING' ? 'เริ่มใน' : model.phase === 'WATCHING' ? 'ลงจอดใน' : ['LANDING','WAITING_RESULT'].includes(model.phase) ? 'ลงจอด' : 'เหลือ';
   return <section className="parachute-game" aria-label="ร่มชูชีพวัดใจสด">
     <div className="parachute-canvas">
-      <header className="parachute-header"><div><small>ร่มชูชีพวัดใจ · {code}</small><strong>รอดลำดับ 2–{round.quota+1}</strong></div><span className="parachute-clock"><small>{stageLabel}</small><b>{model.seconds}</b></span>{onSkip && <button className="race-skip" onClick={onSkip} disabled={disabled}>ข้าม</button>}<button className="icon-button" aria-label="ออกจากวง" onClick={onLeave}><Icon name="exit" size={20}/></button></header>
+      <header className="parachute-header"><div><small>ร่มชูชีพวัดใจ · {code}</small><strong>{round.quota === 1 ? 'คนที่ 2 รอด' : `รอดลำดับ 2–${round.quota+1}`}</strong></div><span className="parachute-clock"><small>{stageLabel}</small><b>{model.seconds}</b></span>{onSkip && <button className="race-skip" onClick={onSkip} disabled={disabled}>ข้าม</button>}<button className="icon-button" aria-label="ออกจากวง" onClick={onLeave}><Icon name="exit" size={20}/></button></header>
       <Sky round={round} profiles={profiles} userId={userId} model={model}/>
       <div className="jump-live-roster" tabIndex={0} aria-label="สถานะการกางร่มของเพื่อน เลื่อนเพื่อดูชื่อทั้งหมด">{model.players.map((p)=><span key={p.id} className={`${p.opened ? 'opened' : ''} ${p.id === userId ? 'is-me' : ''}`}>{getAvatarEmoji(profiles[p.id]?.avatar)} {p.id === userId ? 'คุณ' : profiles[p.id]?.username || 'เพื่อน'} {p.opened ? '✓' : '↓'}</span>)}</div>
       <footer className="parachute-controls">
-        <p role="status">{error || (!connected ? 'กำลังเชื่อมต่อกลับ · รอการยืนยันจากวง' : observer ? 'คุณเป็นกองเชียร์รอบนี้ ดูเพื่อนลุ้นไปด้วยกัน' : opened ? 'กางร่มแล้ว! ดูเพื่อนต่อ แล้วลุ้นผลตอนลงจอด' : 'คนแรกหลุด · ที่รอดสุดท้ายได้ 2 ดาว · กดได้ครั้งเดียว')}</p>
+        <p role="status">{error || (!connected ? 'กำลังเชื่อมต่อกลับ · รอการยืนยันจากวง' : observer ? 'คุณเป็นกองเชียร์รอบนี้ ดูเพื่อนลุ้นไปด้วยกัน' : opened ? 'กางร่มแล้ว! ดูเพื่อนต่อ แล้วลุ้นผลตอนลงจอด' : ['LANDING','WATCHING','WAITING_RESULT'].includes(model.phase) ? 'ปิดรับการกางร่มแล้ว ลุ้นลงจอดพร้อมกัน' : 'คนแรกหลุด · ที่รอดสุดท้ายได้ 2 ดาว · กดได้ครั้งเดียว')}</p>
         <button className={`parachute-open ${opened ? 'is-opened' : ''}`} onClick={()=>command('JUMP')} disabled={!canOpen}>
           <Icon name={opened ? 'check' : 'jump'} size={25}/>
           <strong>{!connected ? 'รอเชื่อมต่อ…' : pending ? 'กำลังยืนยัน…' : observer ? 'เชียร์เพื่อนอยู่' : model.phase === 'PREPARING' ? `เริ่มใน ${model.seconds}…` : opened ? 'กางร่มแล้ว · ลุ้นต่อ!' : model.phase === 'FALLING' ? 'กางร่ม!' : 'กำลังลงจอด…'}</strong>
@@ -71,7 +71,7 @@ export function ParachuteResults({ state, userId }) {
     <span className="eyebrow">ลงจอดครบแล้ว · ROUND {state.roundNumber}</span><h2>ใครรอด ใครใจร้อนไป?</h2>
     <Sky round={round} profiles={profiles} userId={userId} model={model}/>
     {me && <div className={`jump-personal-outcome ${me.safe ? 'safe' : me.missed ? 'missed' : ''}`} role="status"><div><small>ผลของคุณ</small><strong>{me.missed ? 'ไม่ได้กางร่ม · ไม่คิดผล' : me.safe ? 'ลงจอดปลอดภัย!' : 'รับบทลงโทษ'}</strong><p>{me.reason}</p></div><b>+{me.points} ดาว</b></div>}
-    <p className="jump-results-rule">รอดลำดับ 2–{round.quota+1} · ที่รอดสุดท้ายได้ 2 ดาว</p>
+    <p className="jump-results-rule">{round.quota === 1 ? 'คนที่ 2 รอด' : `รอดลำดับ 2–${round.quota+1}`} · ที่รอดสุดท้ายได้ 2 ดาว</p>
     <div className="jump-result-list">{[...round.result.players].sort((a,b)=>(a.order || 99)-(b.order || 99)).map((p)=><div key={p.userId} className={p.safe ? 'safe' : ''}><span>{getAvatarEmoji(profiles[p.userId]?.avatar)}</span><div><strong>{profiles[p.userId]?.username || 'เพื่อนในวง'} {p.userId===userId ? '(คุณ)' : ''}</strong><small>{p.order ? `กางร่มลำดับ ${p.order} · ` : ''}{p.reason}</small></div><b>+{p.points}★</b></div>)}</div>
   </section>;
 }

@@ -30,3 +30,9 @@ test('ten long-lived participant slots stay bounded throughout fall and landing 
     assert.ok(view.players.every((p)=>p.x>0&&p.x<100&&p.y>=16&&p.y<=84&&!p.opened));
   }
 });
+test('final scene follows confirmed result records even when old opener metadata is unavailable',()=>{
+  const r=round();r.result={players:[{userId:'p0',order:1,missed:false},{userId:'p1',order:2,missed:false},{userId:'p2',order:null,missed:true}]};
+  const model=parachuteView(r,18000);
+  assert.deepEqual(model.players.map(p=>p.opened),[true,true,false]);
+  assert.ok(model.players.every(p=>p.landed));
+});

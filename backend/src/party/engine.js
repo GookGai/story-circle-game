@@ -260,7 +260,7 @@ export function finish(state, now, skipped = false) {
       });
     }
     round.result = {
-      title: "ใครรอเป็น ใครโดดทัน?",
+      title: round.jumpFlow === 2 ? 'ลงจอดแล้ว! ใครกางถูกจังหวะ?' : "ใครรอเป็น ใครโดดทัน?",
       description: `รอดลำดับ 2–${round.quota + 1} · รอด +1 ดาว · ที่รอดสุดท้าย +2 ดาว`,
       players: results,
       order: ordered.map(([id]) => id),

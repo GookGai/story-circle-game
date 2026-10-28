@@ -703,6 +703,10 @@
     overscroll-behavior: none;
   }
   .race-canvas { gap: 5px; }
+  .race-screen::before,
+  .race-screen::after { content: ""; position: absolute; left: 0; right: 0; background: #151e32; pointer-events: none; }
+  .race-screen::before { top: 0; height: var(--app-safe-top, 0px); }
+  .race-screen::after { bottom: 0; height: var(--app-safe-bottom, 0px); }
   .race-screen .horse-lane { grid-template-columns: 92px minmax(0, 1fr) 20px; gap: 5px; padding: 3px 4px; }
   .race-screen .horse-lane-heading > strong { font-size: 12px; }
   .race-topbar strong { font-size: 16px; }

@@ -1,10 +1,5 @@
 name: Android installable build
 on:
-  push:
-    branches: [codex/optimize-railway]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:
       release_ui_check:

@@ -1,4 +1,5 @@
 const paths = {
+  install: <><rect x="5" y="2" width="14" height="20" rx="3" /><path d="M12 7v8m-4-4h8M10 19h4" /></>,
   download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
   secret: (
     <>

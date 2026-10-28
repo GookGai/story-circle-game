@@ -1,0 +1,25 @@
+.web-app-install { max-width: 1200px; margin: auto; padding: 36px 5%; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
+.web-app-install-main { display: flex; align-items: center; justify-content: space-between; gap: 28px; }
+.web-app-install-main h2 { font-size: 23px; margin-bottom: 8px; }
+.web-app-install-main p { font-size: 14px; color: var(--text-secondary); }
+.web-app-install-main small { display: block; font-size: 11px; color: var(--text-secondary); margin-top: 9px; line-height: 1.8; }
+.web-app-install-main > button { flex-shrink: 0; min-height: 52px; }
+.web-app-installed { display: flex; align-items: center; gap: 8px; color: var(--neon-green); font-size: 13px; flex-shrink: 0; }
+.web-app-install-feedback { color: var(--text-secondary); font-size: 12px; }
+.web-app-install-feedback:not(:empty) { margin-top: 16px; }
+.web-app-guide { margin-top: 16px; font-size: 13px; }
+.web-app-guide > summary, .legacy-apk > summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--text-secondary); }
+.web-app-guide > div { border-left: 2px solid var(--accent); padding: 6px 0 6px 20px; }
+.web-app-guide h3 { font-size: 15px; margin-bottom: 10px; }
+.web-app-guide ol { padding-left: 20px; }
+.web-app-guide li { padding: 4px 0 4px 4px; line-height: 1.8; }
+.web-app-guide p { color: var(--text-secondary); font-size: 11px; margin-top: 10px; }
+.legacy-apk { margin-top: 6px; font-size: 12px; }
+.legacy-apk p { color: var(--text-secondary); font-size: 11px; }
+.legacy-apk a { color: var(--accent); }
+@media (max-width: 720px) {
+  .web-app-install { padding: 30px 8%; }
+  .web-app-install-main { flex-direction: column; align-items: stretch; gap: 20px; }
+  .web-app-install-main h2 { font-size: 21px; }
+  .web-app-install-main p { font-size: 13px; }
+}

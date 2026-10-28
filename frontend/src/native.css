@@ -16,30 +16,11 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.android-download {
-  max-width: 1200px;
-  margin: auto;
-  padding: 36px 5%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  border-bottom: 1px solid var(--line);
-  scroll-margin-top: 20px;
-}
-.android-download h2 { font-size: 23px; margin-bottom: 8px; }
-.android-download p { font-size: 14px; color: var(--text-secondary); }
-.android-download small { display: block; font-size: 11px; margin-top: 9px; color: var(--text-secondary); line-height: 1.8; }
-.android-download > a { flex-shrink: 0; gap: 12px; }
-.android-download > a small { color: inherit; opacity: .75; margin-top: 3px; }
 .party-modal-backdrop {
   padding-top: calc(25px + var(--app-safe-top));
   padding-bottom: calc(25px + var(--app-safe-bottom));
 }
 @media (max-width: 720px) {
-  .android-download { flex-direction: column; align-items: stretch; padding: 30px 8%; gap: 20px; }
-  .android-download h2 { font-size: 21px; }
-  .android-download p { font-size: 13px; }
   .hero-scroll { min-height: 44px; font-size: 11px; }
   .home-nav {
     height: 124px;

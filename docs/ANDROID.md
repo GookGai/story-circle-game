@@ -28,15 +28,13 @@ Google Play still needs the owner's developer account, store listing, content/po
 
 The web homepage links to the verified signed APK hosted on GitHub Releases. It reads `/api/app/android`; `frontend/src/utils/androidRelease.js` remains a previously published fallback if the metadata request fails. The download panel is hidden in native builds. APK bytes are served by GitHub rather than the Railway app.
 
-## App update notices — 1.2.0
-
 ## Mobile race course — 1.3.0
 
 During RACING, phones automatically show a viewport-sized eight-lane course with native/browser safe-area padding. Names, colored horse portraits/numbers, compact supporters, live places and the selected-horse marker remain visible together. Named supporters move to an optional scrollable sheet. The background room cannot scroll during the mobile race; leaving the race or rotating to a desktop layout restores its previous scrolling. Exit and host skip still use the room's existing confirmation controls. Results and guru/selection screens retain their detail. The race renderer uses the server timeline and official arrival order for already-finished horses, avoiding misleading rank changes from finish-line distance overshoot.
 
 Responsive verification includes 390×844, 320×568 and 844×390 with simulated top/bottom native insets and ten players. This is browser layout verification; physical-phone testing remains separate.
 
-## Update notice behavior
+## App update notices — 1.2.0
 
 Visual thesis: a quiet navy/apricot notice above the existing app, with two clear 48px actions and no modal interruption.
 Content plan: new version, short release note, “ไว้ทีหลัง” / “อัปเดตเลย”, then a one-line explanation that installation keeps existing app data.

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createInstallStore, installGuide } from '../src/utils/pwaInstall.mjs';
+import { createInstallStore, installGuide, standaloneDisplay } from '../src/utils/pwaInstall.mjs';
 
 function browser(standalone = false) {
   const win = new EventTarget();
@@ -78,4 +78,7 @@ test('instructions cover iPhone, desktop-mode iPad, Android and embedded browser
   assert.ok(installGuide({userAgent:'iPhone Line/15.0.0'}).title.includes('เบราว์เซอร์'));
   assert.ok(installGuide({userAgent:'Android; wv) Chrome'}).title.includes('เบราว์เซอร์'));
   assert.ok(installGuide({userAgent:'Windows Edg/145'}).title.includes('คอมพิวเตอร์'));
+});
+test('an ordinary browser fullscreen window is not reported as an installed standalone app', () => {
+  assert.equal(standaloneDisplay({ navigator: {}, matchMedia: (query) => ({ matches: query.includes('fullscreen') }) }), false);
 });

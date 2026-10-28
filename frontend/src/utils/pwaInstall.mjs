@@ -1,5 +1,5 @@
 export function standaloneDisplay(win) {
-  return win.navigator?.standalone === true || win.matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches;
+  return win.navigator?.standalone === true || win.matchMedia('(display-mode: standalone)').matches;
 }
 
 export function installGuide(nav = {}) {
@@ -23,7 +23,7 @@ export function installGuide(nav = {}) {
 }
 
 export function createInstallStore(win) {
-  const media = win.matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)');
+  const media = win.matchMedia('(display-mode: standalone)');
   let deferred = null;
   let snapshot = { installed: standaloneDisplay(win), canPrompt: false, busy: false };
   const listeners = new Set();

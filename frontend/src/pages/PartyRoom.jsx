@@ -608,7 +608,7 @@ export default function PartyRoom() {
 
   return (
     <div
-      className={`party-workspace ${between ? "has-action-dock" : phase === "FORBIDDEN" ? "has-forbidden-dock" : ""}`}
+      className={`party-workspace ${between ? "has-action-dock" : phase === "FORBIDDEN" ? "has-forbidden-dock" : ""} ${phase === 'INPUT' && currentType === 'PANIC_JUMP' ? 'is-parachute-room' : ''}`}
     >
       <header className="room-nav">
         <Link to="/" className="wordmark">

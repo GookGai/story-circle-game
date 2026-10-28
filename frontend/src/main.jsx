@@ -12,6 +12,7 @@ import "./ready.css";
 import "./forbidden.css";
 import "./native.css";
 import "./pwa.css";
+import "./parachute.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

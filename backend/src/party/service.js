@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import { authenticateSocket } from "../middleware/auth.js";
 import { recordUserUsage } from '../usage/store.js';
 import { sourceOf } from '../usage/policy.js';
+import { inputWakeAt } from './parachute.js';
 import {
   nextForbiddenDeadline,
   removeForbiddenMember,
@@ -215,7 +216,7 @@ function schedule(room) {
         ? nextForbiddenDeadline(state)
         : state.round.endsAt
       : state?.phase === "INPUT"
-        ? state.round?.deadlineAt
+        ? inputWakeAt(state.round)
         : state?.phase === "RACING"
           ? state.round?.raceEndsAt
           : null;

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { normalizePenaltyState } from "./penalties.js";
+import { PARACHUTE, prepareParachute, closeParachute, projectParachute } from './parachute.js';
 import { simulateRace } from "../utils/horseEngine.js";
 import { pickQuestion } from "./questions.js";
 import { makeHorseField, makeGurus, presentHorse, presentGuru } from "./horseField.js";
@@ -55,11 +56,11 @@ export const GAMES = [
   {
     type: "PANIC_JUMP",
     name: "ร่มชูชีพวัดใจ",
-    subtitle: "รอให้เป็น แล้วโดดให้ทัน",
+    subtitle: "ดูเพื่อนกางร่ม แล้ววัดใจจังหวะของคุณ",
     minPlayers: 3,
     maxPlayers: 10,
     icon: "jump",
-    rule: "คนแรกหลุด · คนถัดไปแย่งที่รอดให้ทัน 8 วินาที",
+    rule: "ดูเพื่อนกางร่ม · คนแรกหลุด · แย่งที่รอดใน 12 วินาที แล้วลุ้นลงจอด",
   },
 ];
 
@@ -308,6 +309,8 @@ export function advanceState(state, now) {
       round.raceStartedAt = now;
       round.raceEndsAt = now + 12000;
       state.phase = "RACING";
+    } else if (round.gameType === 'PANIC_JUMP' && round.jumpFlow === 2 && now < round.revealAt) {
+      return false;
     } else finish(state, now);
     return true;
   }
@@ -362,7 +365,7 @@ function startRound(state, ctx) {
     startsAt,
     deadlineAt:
       startsAt +
-      (type === "PANIC_JUMP" ? 8000 : type === "HORSE_RACE" ? 45000 : 20000),
+      (type === "PANIC_JUMP" ? PARACHUTE.inputMs : type === "HORSE_RACE" ? 45000 : 20000),
   };
   if (type === "MINORITY_VOTE") {
     round.question =
@@ -374,7 +377,10 @@ function startRound(state, ctx) {
   } else if (type === "HORSE_RACE") {
     round.horses = makeHorseField();
     round.gurus = makeGurus(round.id, round.horses);
-  } else round.quota = Math.max(1, Math.floor((participants.length - 1) / 2));
+  } else {
+    round.quota = Math.max(1, Math.floor((participants.length - 1) / 2));
+    prepareParachute(round);
+  }
   state.round = round;
   state.phase = "INPUT";
 }
@@ -552,8 +558,10 @@ export function applyCommand(original, command, ctx) {
       if (
         type !== "CHOOSE" &&
         Object.keys(round.actions).length === round.participantIds.length
-      )
-        finish(state, ctx.now);
+      ) {
+        if (round.gameType === 'PANIC_JUMP' && round.jumpFlow === 2) closeParachute(round, ctx.now);
+        else finish(state, ctx.now);
+      }
       break;
     }
     case "PAUSE":
@@ -616,6 +624,7 @@ export function projectState(state, userId) {
     const round = result.round;
     round.submitted = Object.keys(round.actions).length;
     round.myAction = round.actions[userId] || null;
+    if (round.gameType === 'PANIC_JUMP') projectParachute(round);
     if (round.gameType === "HORSE_RACE") {
       round.gurus ||= makeGurus(round.id, round.horses);
       if (round.result && !round.result.skipped)

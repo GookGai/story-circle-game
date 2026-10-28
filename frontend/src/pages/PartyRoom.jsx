@@ -7,6 +7,7 @@ import { api } from "../utils/api";
 import { getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
 import { HorseInput, Race, HorseResults } from "../components/HorseGame";
+import ParachuteGame, { ParachuteResults } from '../components/ParachuteGame';
 
 import { ReadyDock, ReadyRollCall } from "../components/ReadyControls";
 import RoomConfirmation from "../components/RoomConfirmation";
@@ -322,53 +323,13 @@ function VoteInput({ round, disabled, command }) {
   );
 }
 
-function JumpInput({ round, disabled, command, now }) {
-  const preparing = now < round.startsAt;
-  return (
-    <div className="jump-stage">
-      <div className="jump-parachute">
-        <Icon name="jump" size={105} />
-      </div>
-      <span className="quota-label">
-        มีที่รอด <strong>{round.quota}</strong> ที่
-      </span>
-      <h2>
-        {preparing
-          ? "หายใจลึก ๆ…"
-          : round.myAction
-            ? "โดดแล้ว! มาลุ้นกัน"
-            : "รอให้เป็น\nแล้วโดดให้ทัน"}
-      </h2>
-      <p>
-        คนแรกหลุด · รอดลำดับ 2–{round.quota + 1}
-        <br />
-        ที่รอดสุดท้ายได้โบนัสอีก 1 ดาว
-      </p>
-      <button
-        className={`jump-button ${round.myAction ? "jumped" : ""}`}
-        disabled={disabled || !!round.myAction}
-        onClick={() => command("JUMP")}
-      >
-        <Icon name={round.myAction ? "check" : "jump"} size={32} />
-        <strong>
-          {preparing
-            ? "เตรียมพร้อม"
-            : round.myAction
-              ? "รับการกดแล้ว"
-              : "กระโดด!"}
-        </strong>
-        <span>{round.myAction ? "รอเฉลยพร้อมกัน" : "กดได้ครั้งเดียว"}</span>
-      </button>
-      <p className="field-note">ลำดับยึดเวลาที่เซิร์ฟเวอร์รับคำสั่ง</p>
-    </div>
-  );
-}
-
 function Results({ state, userId }) {
   const round = state.round,
     result = round.result;
   if (round.gameType === "HORSE_RACE" && !result.skipped)
     return <HorseResults state={state} userId={userId} />;
+  if (round.gameType === 'PANIC_JUMP' && round.jumpFlow === 2 && !result.skipped)
+    return <ParachuteResults state={state} userId={userId} />;
   const me = result.players.find((p) => p.userId === userId);
   return (
     <div className="results-stage">
@@ -874,8 +835,17 @@ export default function PartyRoom() {
                       command={command}
                     />
                   ) : (
-                    <JumpInput
+                    <ParachuteGame
                       round={round}
+                      error={error}
+                      profiles={state.profiles}
+                      userId={user.id}
+                      observer={observer}
+                      connected={connected}
+                      pending={pending}
+                      code={code}
+                      onLeave={() => setConfirmLeave(true)}
+                      onSkip={host ? () => setRoomAction({ type: 'SKIP', roundId: round.id, phase }) : undefined}
                       disabled={
                         disabled ||
                         observer ||

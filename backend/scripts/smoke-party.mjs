@@ -336,6 +336,11 @@ try {
   await start(host, "PANIC_JUMP");
   const jumpRound = host.state.state.round.id;
   await Promise.all(clients.map((c) => command(c, "JUMP")));
+  await waitUntil(() => clients.every((c) => c.state.state.round.opened?.length === count), 3000);
+  assert.equal(host.state.state.phase, 'INPUT');
+  assert.equal(host.state.state.round.result, undefined);
+  assert.ok(host.state.state.round.revealAt > host.state.state.round.deadlineAt);
+  assert.equal(host.state.state.round.actions, undefined);
   await results(clients);
   assert.equal(
     new Set(host.state.state.round.result.players.map((p) => p.order)).size,

@@ -8,6 +8,7 @@ import {
 } from "../src/party/engine.js";
 import { QUESTIONS, pickQuestion } from "../src/party/questions.js";
 import { makeHorseField, makeGurus } from "../src/party/horseField.js";
+import { inputWakeAt } from '../src/party/parachute.js';
 
 test("eight distinct horse identities and three stable, opinionated gurus", () => {
   const horses = makeHorseField(() => 0.5);
@@ -206,6 +207,11 @@ test("10 jumps get unique order and result points match the scoreboard", () => {
   assert.equal(t.state.round.quota, 4);
   for (let i = 0; i < 10; i++)
     t.send("JUMP", {}, { userId: `p${i}`, now: t.context.now + i });
+  assert.equal(t.state.phase, 'INPUT');
+  assert.equal(t.state.round.result, undefined);
+  assert.equal(Object.keys(t.state.scores).length, 0);
+  assert.ok(t.state.round.landingAt >= t.state.round.startsAt + 4500);
+  advanceState(t.state, t.state.round.revealAt);
   assert.equal(t.state.phase, "RESULTS");
   assert.equal(
     new Set(Object.values(t.state.round.actions).map((a) => a.order)).size,
@@ -223,6 +229,52 @@ test("repeated jump cannot claim another order or extend the deadline", () => {
   t.send("JUMP");
   assert.equal(Object.keys(t.state.round.actions).length, 1);
   assert.equal(t.state.round.actions.p0.order, 1);
+});
+test('parachute expiry waits for landing and restart recovery scores exactly once', () => {
+  const t = setup(3, 'PANIC_JUMP');
+  assert.equal(t.state.round.deadlineAt - t.state.round.startsAt, 12000);
+  t.send('JUMP');
+  t.send('JUMP', {}, {userId:'p1',now:t.context.now+250});
+  const copy = JSON.parse(JSON.stringify(t.state));
+  assert.equal(advanceState(copy,copy.round.deadlineAt),false);
+  assert.equal(copy.round.result,undefined);
+  assert.equal(inputWakeAt(copy.round),copy.round.revealAt);
+  assert.ok(inputWakeAt(copy.round)>copy.round.deadlineAt);
+  assert.equal(advanceState(copy,copy.round.revealAt-1),false);
+  assert.equal(advanceState(copy,copy.round.revealAt),true);
+  assert.equal(copy.round.result.players.filter((p)=>p.missed).length,1);
+  const scores=JSON.stringify(copy.scores);
+  assert.equal(advanceState(copy,copy.round.revealAt+10000),false);
+  assert.equal(JSON.stringify(copy.scores),scores);
+});
+test('live parachutes disclose openers without exposing exact input ordering or private actions', () => {
+  const t=setup(3,'PANIC_JUMP');
+  t.send('JUMP',{}, {userId:'p1',now:t.state.round.startsAt+137});
+  t.send('JUMP',{}, {userId:'p0',now:t.state.round.startsAt+169});
+  const before=JSON.stringify(t.state);
+  const view=projectState(t.state,'p0').round;
+  assert.deepEqual(view.opened.map((p)=>p.userId),['p0','p1']);
+  assert.ok(view.opened.every((p)=>p.openedAt===t.state.round.startsAt+100));
+  assert.equal(view.actions,undefined);
+  assert.equal(view.myAction.order,undefined);
+  assert.equal(view.myAction.at,undefined);
+  assert.equal(JSON.stringify(t.state),before);
+});
+test('legacy parachute sessions retain their original finish deadline', () => {
+  const t=setup(3,'PANIC_JUMP');
+  delete t.state.round.jumpFlow;delete t.state.round.revealAt;delete t.state.round.landingAt;
+  assert.equal(inputWakeAt(t.state.round),t.state.round.deadlineAt);
+  assert.equal(advanceState(t.state,t.state.round.deadlineAt),true);
+  assert.equal(t.state.phase,'RESULTS');
+});
+test('skip during landing cancels scoring and late input cannot reopen a closed flight', () => {
+  const t=setup(3,'PANIC_JUMP');
+  for(let i=0;i<3;i++)t.send('JUMP',{}, {userId:`p${i}`,now:t.context.now+i});
+  assert.throws(()=>t.send('JUMP',{}, {now:t.state.round.deadlineAt+1}),/ยังไม่เริ่มหรือหมดเวลา/);
+  t.send('SKIP',{}, {now:t.state.round.landingAt+1});
+  assert.equal(t.state.round.result.skipped,true);
+  assert.equal(Object.keys(t.state.scores).length,0);
+  assert.equal(advanceState(t.state,t.state.round.revealAt+100),false);
 });
 
 test("host controls, stale revisions, strangers and wrong rounds are rejected", () => {

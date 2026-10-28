@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$ArtifactDirectory,
   [Parameter(Mandatory=$true)][string]$JavaHome,
-  [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.1.0',
+  [Parameter(Mandatory=$true)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
   [string]$SigningDirectory = (Join-Path $PSScriptRoot '../.tools/android-signing'),
   [string]$OutputDirectory = (Join-Path $PSScriptRoot '../.tools/android-dist')
 )

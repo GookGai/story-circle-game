@@ -1,8 +1,8 @@
 {
-  "version": "1.1.0",
-  "versionCode": 14,
+  "version": "1.2.0",
+  "versionCode": 16,
   "size": "1.2 MB",
-  "url": "https://github.com/GookGai/story-circle-game/releases/download/android-v1.1.0/story-circle-1.1.0.apk",
-  "notes": "ภาพการ์ตูนใหม่และปุ่มบัญชีที่กดง่ายขึ้น",
-  "sha256": "64f9373f23c5cf29b8bcda7592ad76b03df099f9808af2b6aac474afb002d6dc"
+  "url": "https://github.com/GookGai/story-circle-game/releases/download/android-v1.2.0/story-circle-1.2.0.apk",
+  "notes": "แจ้งเตือนเมื่อมีรุ่นใหม่ พร้อมเลือกอัปเดตหลังจบรอบได้",
+  "sha256": "f92cfc67ae7bfe949c87ed2050a2075dbd9547712631229d165d4d5a1c65fad5"
 }

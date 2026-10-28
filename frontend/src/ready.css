@@ -103,10 +103,10 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #20211dfa;
+  background: #1b2740fa;
   border-top: 1px solid #ffffff20;
   box-shadow: 0 -12px 30px #0002;
-  padding: 16px 32px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 32px calc(16px + var(--app-safe-bottom, 0px));
 }
 .action-dock-inner {
   display: flex;
@@ -263,7 +263,7 @@
 }
 @media (max-width: 600px) {
   .party-action-dock {
-    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 18px calc(12px + var(--app-safe-bottom, 0px));
   }
   .action-dock-inner {
     flex-direction: column;

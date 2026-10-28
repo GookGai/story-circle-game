@@ -1,6 +1,6 @@
 # Story Circle Android
 
-Visual thesis: the existing charcoal, cream and orange game fills the phone, with a matching dice icon and a quiet native splash.
+Visual thesis: a cartoon circle of friends, ink navy, cream and apricot fills the phone, with a matching dice icon and a quiet native splash.
 Content plan: create/join remain the main actions; a saved live circle can be reopened from the first screen; connection problems show one retry action without clearing identity.
 Interaction thesis: enter a six-character circle code; returning from another app resyncs the game; Android back asks before returning home during play.
 
@@ -23,6 +23,10 @@ The APK is for direct installation and testing. Installing from a downloaded fil
 This trial uses manual six-character code entry. HTTPS invitation links and QR codes keep opening the web version; the manifest does not claim them. Native App Links are deferred after a failed warm-invitation check. The parser and public signing-certificate declaration are retained for future work, but no link-opening capability is promised in this APK. Core acceptance covers creating a circle, joining by code, one shared vote with a browser-protocol companion, reopening the circle and launching the minified APK. Check physical phones before a public store rollout.
 
 Google Play still needs the owner's developer account, store listing, content/policy review, required testing and submission. An APK/AAB build is not Play Store approval.
+
+## Version 1.1.0 — 2026-10-28
+
+Cartoon home illustration and neutral “รับบทลงโทษ” outcomes replace the former venue/drinking presentation. The mobile account control has its own row below the logo, a 48px touch target and truncated long names. Shared page spacing reads Capacitor 8's injected `--safe-area-inset-*` variables, with browser `env()` fallbacks, so headers clear the status bar/cutout and action controls clear the navigation bar. This update uses the existing signing key; install it over 1.0.0. The new layout was checked in responsive browser views; physical-phone inset behavior still needs confirmation on the user's device.
 
 ## Trial validation — 2026-10-27
 

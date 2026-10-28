@@ -1,9 +1,71 @@
+:root {
+  /* Capacitor 8 supplies these variables; Safari supplies the env() fallback. */
+  --app-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --app-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --app-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --app-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+}
+body {
+  padding: var(--app-safe-top) var(--app-safe-right) var(--app-safe-bottom) var(--app-safe-left);
+}
+.night-hero {
+  height: calc(100svh - 82px - var(--app-safe-top) - var(--app-safe-bottom));
+}
+.account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.party-modal-backdrop {
+  padding-top: calc(25px + var(--app-safe-top));
+  padding-bottom: calc(25px + var(--app-safe-bottom));
+}
+@media (max-width: 720px) {
+  .home-nav {
+    height: 124px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 32px 48px;
+    gap: 10px;
+    padding: 16px 22px 18px;
+  }
+  .home-nav .nav-actions {
+    width: 100%;
+    min-width: 0;
+    gap: 10px;
+  }
+  .home-nav .nav-actions > .text-button {
+    min-height: 48px;
+    min-width: 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff06;
+  }
+  .home-nav .nav-actions > .account-action {
+    flex: 1;
+    justify-content: space-between;
+  }
+  .home-nav .dim {
+    display: inline;
+    flex-shrink: 0;
+  }
+  .night-hero {
+    height: calc(100svh - 124px - var(--app-safe-top) - var(--app-safe-bottom));
+    min-height: 580px;
+  }
+  .hero-content {
+    padding-top: 40px;
+    padding-bottom: 80px;
+  }
+}
 .native-connection {
   position: fixed;
   z-index: 200;
-  top: env(safe-area-inset-top, 0px);
-  left: 0;
-  right: 0;
+  top: var(--app-safe-top);
+  left: var(--app-safe-left);
+  right: var(--app-safe-right);
   display: flex;
   align-items: center;
   justify-content: space-between;

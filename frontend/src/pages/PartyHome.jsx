@@ -189,13 +189,13 @@ export default function PartyHome() {
           {user?.isAdmin && <Link className="text-button" to="/admin">Dashboard</Link>}
           {user ? (
             <button
-              className="text-button"
+              className="text-button account-action"
               onClick={() => {
                 logout();
                 setRooms([]);
               }}
             >
-              สวัสดี, {user.username.replace(/#\d+$/, "")}{" "}
+              <span className="account-name">สวัสดี, {user.username.replace(/#\d+$/, "")}</span>{" "}
               <span className="dim">· ออก</span>
             </button>
           ) : (

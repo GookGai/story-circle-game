@@ -1,0 +1,77 @@
+/* Keep secondary Thai copy readable in a noisy, dim venue. */
+@media (max-width: 720px) {
+  .room-heading p,
+  .ready-status p,
+  .round-hint,
+  .result-description {
+    font-size: 12px;
+  }
+  .person-identity strong {
+    font-size: 13px;
+  }
+  .person-identity > span,
+  .field-note,
+  .settings-row label {
+    font-size: 11px;
+  }
+  .p-button,
+  .personal-ready > .p-button {
+    font-size: 14px;
+  }
+  .hero-copy {
+    font-size: 15px;
+  }
+  .hero-actions .p-button {
+    font-size: 14px;
+  }
+  .game-editorial-copy p,
+  .how-steps p {
+    font-size: 12px;
+  }
+  .input-progress {
+    font-size: 11px;
+  }
+  .vote-selection,
+  .question-category,
+  .jump-stage > p {
+    font-size: 12px;
+  }
+  .game-pick strong {
+    font-size: 14px;
+  }
+  .settings-row select {
+    font-size: 12px;
+  }
+  .game-editorial-copy h3 {
+    font-size: 20px;
+  }
+  .mobile-invite {
+    display: block;
+    margin: 0 0 18px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+  }
+  .mobile-invite > summary {
+    min-height: 50px;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .mobile-invite .invite-panel {
+    padding: 20px 20px 24px;
+  }
+  .room-heading {
+    scroll-margin-top: 15px;
+  }
+  .game-editorial {
+    grid-template-columns: 115px 1fr;
+    gap: 16px;
+  }
+  .game-editorial-art {
+    height: 185px;
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Story Circle",
+  "short_name": "Story Circle",
+  "description": "เกมปาร์ตี้กับเพื่อน 2–10 คน เปิดวงแล้วเล่นด้วยกัน",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "/?source=webapp",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#151e32",
+  "background_color": "#151e32",
+  "prefer_related_applications": false,
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "/icons/story-circle-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/story-circle-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

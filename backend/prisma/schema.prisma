@@ -10,6 +10,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Operational history survives normal guest/room cleanup; no secret game payloads.
+model UsageEvent {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String?
+  username  String?
+  isGuest   Boolean  @default(false)
+  type      String   @db.VarChar(32)
+  roomCode  String?  @db.VarChar(6)
+  gameType  String?  @db.VarChar(32)
+  source    String   @default("WEB") @db.VarChar(12)
+  errorCode String?  @db.VarChar(40)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum RoomStatus {
@@ -25,13 +42,14 @@ model User {
   username     String        @unique
   password     String
   avatar       String        @default("cat")
+  isGuest      Boolean       @default(false)
   createdAt    DateTime      @default(now())
 
   // Relations
   bets         Bet[]
   votes        Vote[]
   roomPlayers  RoomPlayer[]
-  drinkStats   DrinkStat[]
+  penaltyStats   PenaltyStat[]
   createdRooms Room[]        @relation("HostedRooms")
   setRounds    VoteRound[]   @relation("QuestionSetter")
   panicJumps   PanicJumpAction[]
@@ -48,13 +66,15 @@ model Room {
   settings   Json?
   status     RoomStatus @default(WAITING)
   createdAt  DateTime   @default(now())
+  runtime    Json?
+  revision   Int        @default(0)
 
   // Relations
   host           User            @relation("HostedRooms", fields: [hostId], references: [id])
   players        RoomPlayer[]
   horseRaces     HorseRace[]
   voteRounds     VoteRound[]
-  drinkStats     DrinkStat[]
+  penaltyStats     PenaltyStat[]
   panicJumpGame  PanicJumpGame?
 }
 
@@ -72,6 +92,7 @@ model RoomPlayer {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([roomId, userId])
+  @@index([userId])
 }
 
 // ─── Horse Race ──────────────────────────────────────────────────────────────
@@ -104,6 +125,7 @@ model Horse {
   // Relations
   race HorseRace @relation(fields: [raceId], references: [id], onDelete: Cascade)
   bets Bet[]
+  @@index([raceId])
 }
 
 // ─── Bet ─────────────────────────────────────────────────────────────────────
@@ -119,6 +141,9 @@ model Bet {
   horse Horse     @relation(fields: [horseId], references: [id], onDelete: Cascade)
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([raceId, userId])
+  @@index([horseId])
+  @@index([userId])
 }
 
 // ─── Vote Round ──────────────────────────────────────────────────────────────
@@ -155,9 +180,9 @@ model Vote {
   @@unique([roundId, userId])
 }
 
-// ─── Drink Stat ──────────────────────────────────────────────────────────────
+// ─── Penalty Stat ──────────────────────────────────────────────────────────────
 
-model DrinkStat {
+model PenaltyStat {
   id     String @id @default(uuid())
   userId String
   roomId String
@@ -169,6 +194,7 @@ model DrinkStat {
 
   @@unique([userId, roomId])
   @@index([roomId])
+  @@map("DrinkStat")
 }
 
 // ─── Panic Jump ──────────────────────────────────────────────────────────────
@@ -196,6 +222,7 @@ model PanicJumpRound {
   // Relations
   game     PanicJumpGame     @relation(fields: [gameId], references: [id], onDelete: Cascade)
   jumps    PanicJumpAction[]
+  @@index([gameId])
 }
 
 model PanicJumpAction {

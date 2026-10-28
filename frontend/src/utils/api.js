@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 function getHeaders() {
   const headers = {
@@ -30,6 +30,7 @@ export const api = {
     const response = await fetch(`${BASE_URL}${path}`, {
       method: 'GET',
       headers: getHeaders(),
+      signal: AbortSignal.timeout(12000),
     });
     return handleResponse(response);
   },
@@ -38,6 +39,7 @@ export const api = {
     const response = await fetch(`${BASE_URL}${path}`, {
       method: 'POST',
       headers: getHeaders(),
+      signal: AbortSignal.timeout(12000),
       body: JSON.stringify(body),
     });
     return handleResponse(response);
@@ -47,6 +49,7 @@ export const api = {
     const response = await fetch(`${BASE_URL}${path}`, {
       method: 'PUT',
       headers: getHeaders(),
+      signal: AbortSignal.timeout(12000),
       body: JSON.stringify(body),
     });
     return handleResponse(response);
@@ -56,6 +59,7 @@ export const api = {
     const response = await fetch(`${BASE_URL}${path}`, {
       method: 'DELETE',
       headers: getHeaders(),
+      signal: AbortSignal.timeout(12000),
     });
     return handleResponse(response);
   },

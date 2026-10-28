@@ -1,5 +1,5 @@
 /**
- * Drink statistics routes: room leaderboard and personal stats
+ * Penalty statistics routes: room leaderboard and personal stats
  */
 
 import { Router } from "express";
@@ -11,8 +11,8 @@ const router = Router();
 // ─── GET / — Get global leaderboard of all players ───────────────────────────
 router.get("/", authenticate, async (req, res) => {
   try {
-    // Aggregate drink counts per user across all rooms
-    const drinkStats = await prisma.drinkStat.groupBy({
+    // Aggregate penalty counts per user across all rooms
+    const penaltyStats = await prisma.penaltyStat.groupBy({
       by: ["userId"],
       _sum: {
         count: true,
@@ -20,20 +20,12 @@ router.get("/", authenticate, async (req, res) => {
     });
 
     // Fetch user details for each aggregated stat
-    const players = await Promise.all(
-      drinkStats.map(async (stat) => {
-        const user = await prisma.user.findUnique({
-          where: { id: stat.userId },
-          select: { id: true, username: true, avatar: true },
-        });
-        return {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar,
-          drinkCount: stat._sum.count || 0,
-        };
-      })
-    );
+    const users = await prisma.user.findMany({
+      where: { id: { in: penaltyStats.map(stat => stat.userId) } },
+      select: { id: true, username: true, avatar: true },
+    });
+    const totals = new Map(penaltyStats.map(stat => [stat.userId, stat._sum.count || 0]));
+    const players = users.map(user => ({ ...user, penaltyCount: totals.get(user.id) || 0 }));
 
     res.json({ players });
   } catch (error) {
@@ -42,7 +34,7 @@ router.get("/", authenticate, async (req, res) => {
   }
 });
 
-// ─── GET /room/:roomId — Get drink stats for a specific room ─────────────────
+// ─── GET /room/:roomId — Get penalty stats for a specific room ─────────────────
 router.get("/room/:roomId", authenticate, async (req, res) => {
   try {
     const { roomId } = req.params;
@@ -58,7 +50,7 @@ router.get("/room/:roomId", authenticate, async (req, res) => {
       }
     }
 
-    const stats = await prisma.drinkStat.findMany({
+    const stats = await prisma.penaltyStat.findMany({
       where: { roomId: targetRoomId },
       include: {
         user: { select: { id: true, username: true, avatar: true } },
@@ -71,7 +63,7 @@ router.get("/room/:roomId", authenticate, async (req, res) => {
       id: s.user.id,
       username: s.user.username,
       avatar: s.user.avatar,
-      drinkCount: s.count,
+      penaltyCount: s.count,
     }));
 
     const leaderboard = stats.map((s) => ({
@@ -88,18 +80,18 @@ router.get("/room/:roomId", authenticate, async (req, res) => {
   }
 });
 
-// ─── GET /me — Get current user's total drink count across all rooms ─────────
+// ─── GET /me — Get current user's total penalty count across all rooms ─────────
 router.get("/me", authenticate, async (req, res) => {
   try {
-    const result = await prisma.drinkStat.aggregate({
+    const result = await prisma.penaltyStat.aggregate({
       where: { userId: req.user.id },
       _sum: { count: true },
     });
 
-    const totalDrinks = result._sum.count || 0;
+    const totalPenalties = result._sum.count || 0;
 
     // Also get per-room breakdown
-    const breakdown = await prisma.drinkStat.findMany({
+    const breakdown = await prisma.penaltyStat.findMany({
       where: { userId: req.user.id },
       include: {
         room: { select: { id: true, code: true, gameType: true } },
@@ -107,7 +99,7 @@ router.get("/me", authenticate, async (req, res) => {
       orderBy: { count: "desc" },
     });
 
-    res.json({ totalDrinks, breakdown });
+    res.json({ totalPenalties, breakdown });
   } catch (error) {
     console.error("Get my stats error:", error);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงสถิติ" });

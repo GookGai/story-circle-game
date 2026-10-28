@@ -1,0 +1,95 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { App as NativeApp } from '@capacitor/app';
+import { Network } from '@capacitor/network';
+import { PRODUCTION_URL } from '../utils/appLinks.mjs';
+import { isNativeApp } from '../utils/platform';
+import RoomConfirmation from './RoomConfirmation';
+import AppUpdateNotice from './AppUpdateNotice';
+import { useAppUpdate } from '../hooks/useAppUpdate';
+
+export default function NativeBridge() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const currentPath = useRef(pathname);
+  const navigation = useRef(navigate);
+  const [homeConfirmation, setHomeConfirmation] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const appUpdate = useAppUpdate();
+  useEffect(() => { currentPath.current = pathname; navigation.current = navigate; }, [pathname, navigate]);
+
+  const retry = useCallback(async () => {
+    setChecking(true);
+    try {
+      const result = await fetch(`${PRODUCTION_URL}/health`, { signal: AbortSignal.timeout(5000) });
+      if (!result.ok) throw new Error('Unavailable');
+      setOffline(false);
+      window.dispatchEvent(new Event('storycircle:resume'));
+    } catch {
+      setOffline(true);
+    } finally { setChecking(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeApp) return;
+    let disposed = false;
+    const handles = [];
+    const listen = async (plugin, event, handler) => {
+      const handle = await plugin.addListener(event, handler);
+      if (disposed) await handle.remove();
+      else handles.push(handle);
+    };
+    async function start() {
+      await listen(NativeApp, 'appStateChange', ({ isActive }) => {
+        if (isActive && !disposed) {
+          window.dispatchEvent(new Event('storycircle:resume'));
+          retry();
+        }
+      });
+      await listen(NativeApp, 'backButton', () => {
+        if (disposed) return;
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog) {
+          dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          return;
+        }
+        if (currentPath.current.startsWith('/room/') || currentPath.current.startsWith('/game/')) {
+          setHomeConfirmation(true);
+        } else if (currentPath.current !== '/') navigation.current('/', { replace: true });
+        else NativeApp.minimizeApp();
+      });
+      await listen(Network, 'networkStatusChange', ({ connected }) => {
+        if (disposed) return;
+        setOffline(!connected);
+        if (connected) retry();
+      });
+      const status = await Network.getStatus();
+      if (!disposed) {
+        setOffline(!status.connected);
+        if (status.connected) retry();
+      }
+    }
+    start().catch(() => { if (!disposed) setOffline(true); });
+    return () => {
+      disposed = true;
+      handles.forEach((handle) => handle.remove());
+    };
+  }, [retry]);
+
+  if (!isNativeApp) return null;
+  return <>
+    {!offline && !homeConfirmation && <AppUpdateNotice release={appUpdate.release} onLater={appUpdate.later} onUpdate={appUpdate.update} />}
+    {offline && <aside className="native-connection" role="status">
+      <span>ยังเชื่อมต่อเกมไม่ได้ · ชื่อและวงยังอยู่</span>
+      <button type="button" onClick={retry} disabled={checking}>{checking ? 'กำลังเชื่อมต่อ…' : 'ลองอีกครั้ง'}</button>
+    </aside>}
+    {homeConfirmation && <RoomConfirmation
+      title="กลับไปหน้าแรก?"
+      description="วงนี้ยังอยู่ กลับเข้ามาเล่นต่อได้จากหน้าแรก"
+      actionLabel="กลับหน้าแรก"
+      onCancel={() => setHomeConfirmation(false)}
+      onConfirm={() => { setHomeConfirmation(false); navigate('/'); }}
+    />}
+  </>;
+}

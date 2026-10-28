@@ -7,6 +7,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../utils/prisma.js";
 import { authenticate } from "../middleware/auth.js";
+import { randomBytes } from "node:crypto";
+import { isAdminUser, isReservedAdminUsername } from '../utils/adminPolicy.js';
+import { recordUsage, rememberUsageUser } from '../usage/store.js';
+import { sourceOf } from '../usage/policy.js';
 
 const router = Router();
 
@@ -17,7 +21,7 @@ function generateToken(user) {
   return jwt.sign(
     { id: user.id, username: user.username },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "7d" },
   );
 }
 
@@ -25,8 +29,9 @@ function generateToken(user) {
  * Strip password from user object before sending to client
  */
 function sanitizeUser(user) {
+  rememberUsageUser(user);
   const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  return { ...userWithoutPassword, isAdmin: isAdminUser(user) };
 }
 
 // ─── POST /guest ─────────────────────────────────────────────────────────────
@@ -34,47 +39,36 @@ router.post("/guest", async (req, res) => {
   try {
     const { username, avatar } = req.body;
 
-    if (!username || username.trim().length < 1) {
+    if (
+      typeof username !== "string" ||
+      username.trim().length < 1 ||
+      username.trim().length > 20
+    ) {
       return res.status(400).json({ error: "กรุณากรอกชื่อเล่น" });
     }
 
-    const cleanName = username.trim().substring(0, 15);
+    const cleanName = username.trim().replace(/#/g, "").substring(0, 15);
+    if (!cleanName)
+      return res.status(400).json({ error: "กรุณาใช้ชื่อเล่นที่มีตัวอักษร" });
 
-    // Generate a unique username by appending a random tag (e.g. Nick#1234)
-    let finalUsername = "";
-    let isUnique = false;
-    let attempts = 0;
+    // A 48-bit internal tag avoids a name-availability query per guest. The
+    // unique database constraint remains the final authority on collisions.
+    const finalUsername = `${cleanName}#${randomBytes(6).readUIntBE(0, 6)}`;
 
-    while (!isUnique && attempts < 10) {
-      attempts++;
-      const randTag = Math.floor(1000 + Math.random() * 9000); // 1000 to 9999
-      finalUsername = `${cleanName}#${randTag}`;
-      
-      const existing = await prisma.user.findUnique({
-        where: { username: finalUsername }
-      });
-      if (!existing) {
-        isUnique = true;
-      }
-    }
-
-    if (!isUnique) {
-      finalUsername = `${cleanName}#${Date.now().toString().slice(-4)}`;
-    }
-
-    // Create guest user in DB with a random hashed password
-    const dummyPassword = Math.random().toString(36) + Date.now().toString();
-    const hashedPassword = await bcrypt.hash(dummyPassword, 10);
+    // Guests are excluded from password login and do not need a bcrypt hash.
+    const hashedPassword = `guest:${randomBytes(32).toString("hex")}`;
 
     const user = await prisma.user.create({
       data: {
         username: finalUsername,
         password: hashedPassword,
+        isGuest: true,
         avatar: avatar || "cat",
       },
     });
 
     const token = generateToken(user);
+    recordUsage({ type: 'ACCOUNT_CREATED', user, source: sourceOf(req) });
 
     res.status(201).json({
       token,
@@ -92,7 +86,12 @@ router.post("/register", async (req, res) => {
     const { username, password, avatar } = req.body;
 
     // Validate input
-    if (!username || !password) {
+    if (
+      typeof username !== "string" ||
+      typeof password !== "string" ||
+      !username ||
+      !password
+    ) {
       return res.status(400).json({ error: "กรุณากรอก username และ password" });
     }
 
@@ -100,8 +99,8 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Username ต้องมี 2-20 ตัวอักษร" });
     }
 
-    if (password.length < 4) {
-      return res.status(400).json({ error: "Password ต้องมีอย่างน้อย 4 ตัวอักษร" });
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ error: "Password ต้องมี 8–128 ตัวอักษร" });
     }
 
     // Check if username already exists
@@ -109,6 +108,7 @@ router.post("/register", async (req, res) => {
     if (existingUser) {
       return res.status(409).json({ error: "Username นี้ถูกใช้แล้ว" });
     }
+    if (isReservedAdminUsername(username)) return res.status(403).json({ error: 'ชื่อบัญชีนี้สงวนไว้สำหรับผู้ดูแล' });
 
     // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -121,6 +121,7 @@ router.post("/register", async (req, res) => {
     });
 
     const token = generateToken(user);
+    recordUsage({ type: 'ACCOUNT_CREATED', user, source: sourceOf(req) });
 
     res.status(201).json({
       token,
@@ -137,23 +138,34 @@ router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
+    if (
+      typeof username !== "string" ||
+      typeof password !== "string" ||
+      !username ||
+      !password ||
+      password.length > 128
+    ) {
       return res.status(400).json({ error: "กรุณากรอก username และ password" });
     }
 
     // Find user by username
     const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) {
-      return res.status(401).json({ error: "Username หรือ password ไม่ถูกต้อง" });
+    if (!user || user.isGuest) {
+      return res
+        .status(401)
+        .json({ error: "Username หรือ password ไม่ถูกต้อง" });
     }
 
     // Compare password
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return res.status(401).json({ error: "Username หรือ password ไม่ถูกต้อง" });
+      return res
+        .status(401)
+        .json({ error: "Username หรือ password ไม่ถูกต้อง" });
     }
 
     const token = generateToken(user);
+    recordUsage({ type: 'LOGIN', user, source: sourceOf(req) });
 
     res.json({
       token,

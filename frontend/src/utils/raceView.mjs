@@ -11,8 +11,17 @@ export function raceView(round, now) {
     if (aDone !== bDone) return aDone ? -1 : 1;
     return b[1] - a[1];
   });
+  const finished = order.filter((r) => r[1] >= 2500).length;
+  const distance = order[0]?.[1] || 0;
+  const gap = order.length > 1 ? distance - order[1][1] : Infinity;
+  const moment = finished >= 3 ? 'ครบสามตัว! ลุ้นอันดับที่เหลือ'
+    : finished ? 'เข้าเส้นชัยแล้ว! ลุ้นท็อป 3'
+    : distance >= 2000 ? 'ทางตรงสุดท้าย! ใครจะรอด'
+    : distance > 400 && gap <= 45 ? 'สูสี! จี้กันมาติด ๆ'
+    : distance > 0 && distance < 250 ? 'ออกตัวแล้ว! เชียร์ให้สุด'
+    : 'เชียร์ให้ติดท็อป 3!';
   return {
-    frame, leaders: order.slice(0, 3),
+    frame, leaders: order.slice(0, 3), moment,
     ranks: new Map(order.map(([id], i) => [id, i + 1])),
     seconds: Math.max(0, Math.ceil((round.raceEndsAt - now) / 1000)),
   };

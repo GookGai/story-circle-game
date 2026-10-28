@@ -8,13 +8,21 @@ Interaction thesis: a short staggered entrance on the landing page, gentle photo
 
 Implementation: persisted, versioned room runtime; transactional commands; server deadlines; per-player snapshots; explicit host handoff; curated questions; unified game screens. Existing gameplay protocols are retired to avoid competing writers. Database changes are additive.
 
-## Horse game restoration — 19 October 2026
+## Horse game
+
+### Character-first horse selection — 28 October 2026
+
+Visual thesis: choose an expressive horse through three contrasting guru opinions, then watch small, clearly separated runners.
+Content plan: preserve names, portraits, personalities and named picks; show each guru's recommendation level as 1–5 stars. Hide all physical stats and skill descriptions. Stars express each guru's opinion, never a win probability.
+Interaction thesis: follow a guru or choose a favorite; public projections keep actual tuning and skills private in every phase, including restored rounds. The race keeps eight lanes, uses smaller runners (30px on portrait phones, 24px on short landscape screens), precise distance bars and a leader highlight. Brief current-frame calls mark close racing and the final straight without changing outcomes or revealing future frames. Existing scoring and simulation are unchanged.
 
 ### Mobile live race — 28 October 2026
 
 Visual thesis: one cream racecourse fills the available phone screen, with eight stable colored lanes and a strong marker for the viewer's horse.
 Content plan: compact race controls/countdown, current leaders, all eight lanes, personal live rank and an optional named-picks sheet. Selection profiles, gurus and detailed results stay outside the live race.
 Interaction thesis: enter the full-screen layout automatically during RACING, move every horse on the same course without scrolling, and return to the normal result screen when the server finishes. Preserve exit/host skip confirmations and reduced motion; freeze background scrolling while the mobile race is mounted. The picks sheet can scroll independently without making the course taller.
+
+### Original restoration — 19 October 2026 (historical)
 
 Visual thesis: a cream race programme on the existing dark table, with eight illustrated horse identities carried through selection, race lanes and results.
 

@@ -20,8 +20,48 @@ test("eight distinct horse identities and three stable, opinionated gurus", () =
     assert.notEqual(g.pickId, g.avoidId);
     assert.equal(g.ratings[g.pickId], 5);
     assert.equal(g.ratings[g.avoidId], 1);
-    assert.ok(Object.values(g.ratings).every((n) => n >= 1 && n <= 5));
+    assert.ok(g.quote && g.missQuote);
   }
+});
+
+test("horse views expose guru recommendations while keeping stats and skills private across phases", () => {
+  const t = setup(2, "HORSE_RACE");
+  t.state.round.horses[0].form = { speed: 5, stamina: 5, luck: 5 };
+  t.state.round.horses[0].privateTuning = 999;
+  t.state.round.gurus[0].privateScore = 999;
+  t.state.round.gurus[0].ratings.speed = 90;
+  const check = (view) => {
+    for (const h of view.round.horses) {
+      for (const field of ['speed', 'stamina', 'luck', 'form', 'ability', 'abilityDescription', 'privateTuning']) assert.equal(h[field], undefined);
+      assert.ok(h.name && h.color && h.personality);
+    }
+    for (const g of [...view.round.gurus, ...(view.round.result?.gurus || [])]) {
+      assert.equal(g.privateScore, undefined);
+      assert.equal(g.ratings.speed, undefined);
+      assert.equal(Object.keys(g.ratings).length, 8);
+      assert.ok(Object.values(g.ratings).every((n) => n >= 1 && n <= 5));
+    }
+  };
+  const before = JSON.stringify(t.state);
+  for (const user of ['p0', 'p1']) check(projectState(t.state, user));
+  assert.equal(JSON.stringify(t.state), before);
+  assert.ok(Number.isFinite(t.state.round.horses[0].speed));
+  advanceState(t.state, t.state.round.deadlineAt);
+  t.state.round.rankings[0].speed = 90; // A restored legacy ranking is projected too.
+  const racing = projectState(t.state, 'p0');
+  check(racing);
+  assert.equal(racing.round.rankings[0].speed, undefined);
+  advanceState(t.state, t.state.round.raceEndsAt);
+  check(projectState(t.state, 'p0'));
+});
+
+test("restored horse rounds regenerate stable guru opinions from private data before projection", () => {
+  const t = setup(2, 'HORSE_RACE');
+  const expected = projectState(t.state, 'p0').round.gurus;
+  delete t.state.round.gurus;
+  const restored = JSON.parse(JSON.stringify(t.state));
+  assert.deepEqual(projectState(restored, 'p0').round.gurus, expected);
+  assert.equal(restored.round.gurus, undefined);
 });
 
 test("horse results name every penalized player, keep missing players neutral, and persist picks", () => {

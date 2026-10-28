@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { normalizePenaltyState } from "./penalties.js";
 import { simulateRace } from "../utils/horseEngine.js";
 import { pickQuestion } from "./questions.js";
-import { makeHorseField, makeGurus, presentHorse } from "./horseField.js";
+import { makeHorseField, makeGurus, presentHorse, presentGuru } from "./horseField.js";
 import {
   ensureForbiddenConfig,
   startForbidden,
@@ -617,26 +617,22 @@ export function projectState(state, userId) {
     round.submitted = Object.keys(round.actions).length;
     round.myAction = round.actions[userId] || null;
     if (round.gameType === "HORSE_RACE") {
-      round.horses = round.horses.map(presentHorse);
       round.gurus ||= makeGurus(round.id, round.horses);
       if (round.result && !round.result.skipped)
         round.result.gurus ||= round.gurus.map((g) => {
           const rank = round.rankings.find((h) => h.id === g.pickId)?.rank;
           return { ...g, rank, hit: rank <= 3 };
         });
+      round.horses = round.horses.map(presentHorse);
+      round.gurus = round.gurus.map(presentGuru);
+      if (round.result?.gurus) round.result.gurus = round.result.gurus.map(presentGuru);
+      if (round.rankings) round.rankings = round.rankings.map(({ id, name, rank }) => ({ id, name, rank }));
       round.picks = Object.entries(round.actions).map(([id, value]) => ({
         userId: id,
         horseId: value.choice,
       }));
     }
     if (result.phase === "INPUT") {
-      if (round.gameType === "HORSE_RACE") {
-        round.horses.forEach((h) => {
-          delete h.speed;
-          delete h.stamina;
-          delete h.luck;
-        });
-      }
       delete round.actions;
     }
   }

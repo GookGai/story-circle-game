@@ -82,27 +82,19 @@ const hash = (value) => {
   }
   return (n >>> 0) / 4294967296;
 };
-const stars = (value) =>
-  Math.max(1, Math.min(5, 1 + Math.floor((value - 70) / 5)));
-
 export function presentHorse(horse) {
   const identity =
     HORSE_IDENTITIES.find((h) => h.name === horse.name) ||
     HORSE_IDENTITIES[(horse.id - 1) % 8];
-  return {
-    ...identity,
-    ...horse,
-    form: horse.form || {
-      speed: stars(horse.speed),
-      stamina: stars(horse.stamina),
-      luck: stars(horse.luck),
-    },
-  };
+  // Explicit public presentation: never expose private tuning or legacy form bars.
+  return Object.fromEntries(
+    ['id', 'name', 'color', 'style', 'symbol', 'personality']
+      .map((key) => [key, horse[key] ?? identity[key]]),
+  );
 }
 
 export function makeHorseField(random = Math.random) {
-  return HORSE_IDENTITIES.map((identity, index) =>
-    presentHorse({
+  return HORSE_IDENTITIES.map((identity, index) => ({
       ...identity,
       id: index + 1,
       speed: 70 + Math.floor(random() * 21),
@@ -110,6 +102,18 @@ export function makeHorseField(random = Math.random) {
       luck: 70 + Math.floor(random() * 21),
     }),
   );
+}
+
+export function presentGuru(guru) {
+  const result = Object.fromEntries(
+    ['id', 'name', 'avatar', 'subtitle', 'quote', 'missQuote', 'pickId', 'avoidId', 'rank', 'hit']
+      .filter((key) => guru[key] !== undefined).map((key) => [key, guru[key]]),
+  );
+  // Recommendation stars are opinions; they are separate from private horse stats.
+  if (guru.ratings) result.ratings = Object.fromEntries(
+    Object.entries(guru.ratings).filter(([id, value]) => /^[1-8]$/.test(id) && Number.isInteger(value) && value >= 1 && value <= 5),
+  );
+  return result;
 }
 
 export function makeGurus(roundId, horses) {
@@ -161,17 +165,9 @@ export function makeGurus(roundId, horses) {
       ...guru,
       pickId: favorite.id,
       avoidId: avoid.id,
-      ratings: Object.fromEntries(
-        horses.map((h) => [
-          h.id,
-          h.id === favorite.id
-            ? 5
-            : h.id === avoid.id
-              ? 1
-              : 2 +
-                Math.floor(hash(`${roundId}:${guru.id}:rating:${h.id}`) * 3),
-        ]),
-      ),
+      ratings: Object.fromEntries(horses.map((h) => [h.id,
+        h.id === favorite.id ? 5 : h.id === avoid.id ? 1 : 2 + Math.floor(hash(`${roundId}:${guru.id}:rating:${h.id}`) * 3),
+      ])),
     };
   });
 }

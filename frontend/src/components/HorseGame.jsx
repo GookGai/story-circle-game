@@ -170,8 +170,8 @@ function Gurus({ round, command, disabled, reveal = false }) {
       </div>
       {!reveal && (
         <p className="horse-footnote">
-          โพยชวนคุยจากฟอร์มและดวงของรอบนี้ · กูรูไม่รู้ผลล่วงหน้า
-          เปลี่ยนใจได้ก่อนแข่ง
+          ดาวยิ่งมาก กูรูยิ่งเชียร์ · เลือกเองหรือเชื่อตามกูรูได้
+          เปลี่ยนใจได้ก่อนแข่ง กูรูไม่รู้ผลล่วงหน้า
         </p>
       )}
     </section>
@@ -214,37 +214,18 @@ export function HorseInput({ round, disabled, command, profiles, userId }) {
                 <HorsePortrait horse={horse} />
                 <h4>{horse.name}</h4>
                 <span className="horse-tagline">{horse.personality}</span>
-                <strong className="horse-ability">{horse.ability}</strong>
-                <span className="horse-ability-description">
-                  {horse.abilityDescription}
-                </span>
-                <span className="horse-form">
-                  {[
-                    ["speed", "เร็ว"],
-                    ["stamina", "อึด"],
-                    ["luck", "ดวง"],
-                  ].map(([key, label]) => (
-                    <span key={key}>
-                      {label}
-                      <b aria-label={`${horse.form?.[key] || 1} จาก 5`}>
-                        {"▰".repeat(horse.form?.[key] || 1)}
-                        <i>{"▰".repeat(5 - (horse.form?.[key] || 1))}</i>
-                      </b>
-                    </span>
-                  ))}
-                </span>
                 <span className="horse-select-label">
                   {selected ? "✓ คุณเลือกตัวนี้" : "เลือกตัวนี้ →"}
                 </span>
               </button>
-              <div className="horse-guru-votes">
-                {(round.gurus || [])
-                  .filter((g) => g.pickId === horse.id)
-                  .map((g) => (
-                    <span key={g.id}>
-                      {g.avatar} {g.name} ให้ 5 ★
-                    </span>
-                  ))}
+              <div className="horse-guru-ratings" aria-label="ระดับคำแนะนำจากกูรู">
+                {(round.gurus || []).map((g) => {
+                  const level = g.ratings?.[horse.id] || (g.pickId === horse.id ? 5 : g.avoidId === horse.id ? 1 : 3);
+                  return <div key={g.id}>
+                    <span>{g.avatar} {g.name}</span>
+                    <b aria-label={`${g.name} แนะนำ ${level} จาก 5`}>{'★'.repeat(level)}<i>{'☆'.repeat(5 - level)}</i></b>
+                  </div>;
+                })}
               </div>
               <Supporters
                 round={round}
@@ -298,7 +279,7 @@ function RacePicks({ round, profiles, userId, onClose }) {
 }
 
 export function Race({ round, now, profiles, userId, code, onLeave, onSkip, disabled }) {
-  const { frame, leaders, ranks, seconds } = raceView(round, now);
+  const { frame, leaders, ranks, seconds, moment } = raceView(round, now);
   const [picksOpen, setPicksOpen] = useState(false);
   useEffect(() => {
     const media = window.matchMedia(RACE_VIEWPORT_QUERY);
@@ -313,7 +294,7 @@ export function Race({ round, now, profiles, userId, code, onLeave, onSkip, disa
     <section className="horse-game horse-live race-screen" aria-label="สนามแข่งม้าสด">
       <div className="race-canvas" inert={picksOpen ? true : undefined}>
       <header className="race-topbar">
-        <div><small>สนามสด{code ? ` · ${code}` : ''}</small><strong>เชียร์ให้ติดท็อป 3!</strong></div>
+        <div><small>สนามสด{code ? ` · ${code}` : ''}</small><strong>{moment}</strong></div>
         <span className="race-clock" aria-label={`เหลือ ${seconds} วินาที`}>{seconds}<small>วิ</small></span>
         {onSkip && <button className="race-skip" disabled={disabled} onClick={onSkip}>ข้าม</button>}
         {onLeave && <button className="icon-button" onClick={onLeave} aria-label="ออกจากวง"><Icon name="exit" size={20} /></button>}
@@ -334,7 +315,7 @@ export function Race({ round, now, profiles, userId, code, onLeave, onSkip, disa
         const picks = (round.picks || []).filter((p) => p.horseId === horse.id);
         return (
           <div
-            className={`horse-lane ${mine ? "my-horse-lane" : ""}`}
+            className={`horse-lane ${mine ? "my-horse-lane" : ""} ${ranks.get(horse.id) === 1 ? 'is-leading' : ''}`}
             key={horse.id}
             style={{ "--horse-color": horse.color }}
             aria-label={`ม้า ${horse.id} ${horse.name}${mine ? ' คุณเชียร์' : ''} อันดับ ${ranks.get(horse.id) || 'รอเริ่ม'}`}
@@ -349,6 +330,7 @@ export function Race({ round, now, profiles, userId, code, onLeave, onSkip, disa
               </span>
             </div>
             <div className="horse-runway">
+              <span className="race-distance-bar" style={{ width: `${position}%` }} aria-hidden="true" />
               <div
                 className="horse-runner"
                 style={{ left: `calc(${position}% - var(--race-runner-width) * ${position / 100})` }}

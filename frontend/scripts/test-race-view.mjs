@@ -23,3 +23,9 @@ test('before a snapshot has frames all eight lanes can render without invented l
   assert.equal(view.ranks.size, 0);
   assert.deepEqual(view.leaders, []);
 });
+test('race calls describe only the current close race, final stretch and observed finishers', () => {
+  const round = {raceStartedAt:0,raceEndsAt:3000,frames:[[[1,600],[2,590],[3,500]],[[1,2200],[2,2100],[3,2000]],[[1,2500],[2,2500],[3,2500]] ]};
+  assert.ok(raceView(round,0).moment.includes('สูสี'));
+  assert.ok(raceView(round,1000).moment.includes('ทางตรงสุดท้าย'));
+  assert.ok(raceView(round,3000).moment.includes('ครบสามตัว'));
+});

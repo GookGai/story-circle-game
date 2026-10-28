@@ -10,6 +10,12 @@ Implementation: persisted, versioned room runtime; transactional commands; serve
 
 ## Horse game restoration — 19 October 2026
 
+### Mobile live race — 28 October 2026
+
+Visual thesis: one cream racecourse fills the available phone screen, with eight stable colored lanes and a strong marker for the viewer's horse.
+Content plan: compact race controls/countdown, current leaders, all eight lanes, personal live rank and an optional named-picks sheet. Selection profiles, gurus and detailed results stay outside the live race.
+Interaction thesis: enter the full-screen layout automatically during RACING, move every horse on the same course without scrolling, and return to the normal result screen when the server finishes. Preserve exit/host skip confirmations and reduced motion; freeze background scrolling while the mobile race is mounted. The picks sheet can scroll independently without making the course taller.
+
 Visual thesis: a cream race programme on the existing dark table, with eight illustrated horse identities carried through selection, race lanes and results.
 
 Content plan: explicit top-three rule; three opinionated gurus; selectable profiles with actual abilities, form and named supporters; readable lanes; personal outcome and named penalty/safe/missed groups; full finish order and guru reactions.

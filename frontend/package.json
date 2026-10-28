@@ -11,7 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test scripts/test-app-links.mjs scripts/test-app-update.mjs",
+    "test": "node --test scripts/test-app-links.mjs scripts/test-app-update.mjs scripts/test-race-view.mjs",
     "android:sync": "node scripts/build-android.mjs",
     "android:open": "cap open android"
   },

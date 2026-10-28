@@ -918,6 +918,10 @@ export default function PartyRoom() {
                   now={now}
                   profiles={state.profiles}
                   userId={user.id}
+                  code={code}
+                  onLeave={() => setConfirmLeave(true)}
+                  onSkip={host ? () => setRoomAction({ type: 'SKIP', roundId: round.id, phase }) : undefined}
+                  disabled={disabled}
                 />
               )}
               {phase === "RESULTS" && (

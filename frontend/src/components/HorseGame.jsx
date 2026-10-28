@@ -1,4 +1,7 @@
 import { getAvatarEmoji } from "../utils/avatars";
+import { useEffect, useRef, useState } from "react";
+import Icon from "./PartyIcon";
+import { raceView, RACE_VIEWPORT_QUERY } from "../utils/raceView.mjs";
 
 export function HorsePortrait({ horse }) {
   const dark = ["dragon", "lightning"].includes(horse.style);
@@ -273,82 +276,101 @@ export function HorseInput({ round, disabled, command, profiles, userId }) {
   );
 }
 
-export function Race({ round, now, profiles, userId }) {
-  const progress = Math.max(
-    0,
-    Math.min(
-      1,
-      (now - round.raceStartedAt) / (round.raceEndsAt - round.raceStartedAt),
-    ),
-  );
-  const frame =
-    round.frames?.[
-      Math.min(
-        round.frames.length - 1,
-        Math.floor(progress * round.frames.length),
-      )
-    ] || [];
-  const leaders = [...frame].sort((a, b) => b[1] - a[1]).slice(0, 3);
+function RacePicks({ round, profiles, userId, onClose }) {
+  const close = useRef(null);
+  useEffect(() => {
+    const previous = document.activeElement;
+    close.current?.focus();
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, []);
+  return <div className="race-picks-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <section className="race-picks-sheet" role="dialog" aria-modal="true" aria-label="โพยเพื่อนในสนาม" onKeyDown={(e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Tab') { e.preventDefault(); close.current?.focus(); }
+    }}>
+      <header><div><h3>ใครเชียร์ตัวไหน</h3><p>สนามยังแข่งอยู่ ปิดโพยเพื่อกลับไปลุ้น</p></div><button ref={close} className="icon-button" onClick={onClose} aria-label="ปิดโพยเพื่อน"><Icon name="close" /></button></header>
+      <div className="race-picks-list">{round.horses.map((horse) => <article key={horse.id}>
+        <div><HorsePortrait horse={horse} /><strong>#{horse.id} {horse.name}</strong></div>
+        <Supporters round={round} horseId={horse.id} profiles={profiles} userId={userId} />
+      </article>)}</div>
+    </section>
+  </div>;
+}
+
+export function Race({ round, now, profiles, userId, code, onLeave, onSkip, disabled }) {
+  const { frame, leaders, ranks, seconds } = raceView(round, now);
+  const [picksOpen, setPicksOpen] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(RACE_VIEWPORT_QUERY);
+    const original = document.body.style.overflow;
+    const resize = () => { document.body.style.overflow = media.matches ? 'hidden' : original; };
+    resize();
+    media.addEventListener('change', resize);
+    return () => { media.removeEventListener('change', resize); document.body.style.overflow = original; };
+  }, []);
   const chosen = round.horses.find((h) => h.id === round.myAction?.choice);
   return (
-    <div className="horse-game horse-live">
-      <div className="horse-rules">
-        <strong>เชียร์ให้ติดท็อป 3!</strong>
-        <span>
-          {chosen
-            ? `คุณเชียร์ #${chosen.id} ${chosen.name}`
-            : "รอบนี้คุณเป็นกองเชียร์"}
-        </span>
-      </div>
-      <div className="race-leaders">
+    <section className="horse-game horse-live race-screen" aria-label="สนามแข่งม้าสด">
+      <div className="race-canvas" inert={picksOpen ? true : undefined}>
+      <header className="race-topbar">
+        <div><small>สนามสด{code ? ` · ${code}` : ''}</small><strong>เชียร์ให้ติดท็อป 3!</strong></div>
+        <span className="race-clock" aria-label={`เหลือ ${seconds} วินาที`}>{seconds}<small>วิ</small></span>
+        {onSkip && <button className="race-skip" disabled={disabled} onClick={onSkip}>ข้าม</button>}
+        {onLeave && <button className="icon-button" onClick={onLeave} aria-label="ออกจากวง"><Icon name="exit" size={20} /></button>}
+      </header>
+      <div className="race-leaders" aria-label="สามอันดับขณะนี้">
         <span>กำลังนำ</span>
         {leaders.map(([id], i) => (
-          <strong key={id}>
+          <strong key={id} style={{ '--horse-color': round.horses.find((h) => h.id === id)?.color }}>
             {i + 1}. #{id} {round.horses.find((h) => h.id === id)?.name}
           </strong>
         ))}
       </div>
+      <div className="race-board" aria-label="ม้าทั้ง 8 ลู่">
       {round.horses.map((horse) => {
         const row = frame.find((r) => r[0] === horse.id);
-        const position = Math.min(100, ((row?.[1] || 0) / 2500) * 100);
+        const position = Math.max(0, Math.min(100, ((row?.[1] || 0) / 2500) * 100));
         const mine = chosen?.id === horse.id;
+        const picks = (round.picks || []).filter((p) => p.horseId === horse.id);
         return (
           <div
             className={`horse-lane ${mine ? "my-horse-lane" : ""}`}
             key={horse.id}
             style={{ "--horse-color": horse.color }}
+            aria-label={`ม้า ${horse.id} ${horse.name}${mine ? ' คุณเชียร์' : ''} อันดับ ${ranks.get(horse.id) || 'รอเริ่ม'}`}
           >
             <div className="horse-lane-heading">
-              <b>#{horse.id}</b>
-              <strong>{horse.name}</strong>
-              {mine && <em>คุณเชียร์</em>}
-              <span className="horse-event">
-                {row?.[2] === "burst"
-                  ? "พุ่ง! 🚀"
-                  : row?.[2] === "stumble"
-                    ? "สะดุด!"
-                    : horse.symbol}
+              <strong><b>#{horse.id}</b> {horse.name}</strong>
+              <span className="race-cheerers" aria-label={`${picks.length} คนเชียร์${mine ? ' รวมคุณ' : ''}`}>
+                {mine && <em>คุณ</em>}
+                {picks.slice(0, 3).map((p) => <span key={p.userId} title={profiles[p.userId]?.username}>{getAvatarEmoji(profiles[p.userId]?.avatar)}</span>)}
+                {picks.length > 3 && <small>+{picks.length - 3}</small>}
+                {!picks.length && <small>กองเชียร์ —</small>}
               </span>
             </div>
             <div className="horse-runway">
               <div
                 className="horse-runner"
-                style={{ left: `calc(${position}% - ${position * 0.64}px)` }}
+                style={{ left: `calc(${position}% - var(--race-runner-width) * ${position / 100})` }}
               >
                 <HorsePortrait horse={horse} />
+                <b className="race-saddle-number">{horse.id}</b>
+                {row?.[2] && <span className={`race-event ${row[2]}`} aria-label={row[2] === 'burst' ? 'พุ่ง' : 'สะดุด'}>{row[2] === 'burst' ? '↗' : '!'}</span>}
               </div>
               <span className="horse-finish-line" />
             </div>
-            <Supporters
-              round={round}
-              horseId={horse.id}
-              profiles={profiles}
-              userId={userId}
-            />
+            <span className={`race-rank ${ranks.get(horse.id) <= 3 ? 'top-three' : ''}`} aria-label={`อันดับ ${ranks.get(horse.id) || 'รอเริ่ม'}`}>{ranks.get(horse.id) || '—'}</span>
           </div>
         );
       })}
-    </div>
+      </div>
+      <footer className="race-watch-footer">
+        <div>{chosen ? <><small>ม้าของคุณ</small><strong>#{chosen.id} {chosen.name} <span>· อันดับ {ranks.get(chosen.id) || '—'}/8</span></strong></> : <strong>กองเชียร์ · ลุ้นท็อป 3 ไปด้วยกัน</strong>}</div>
+        <button className="race-picks-toggle" onClick={() => setPicksOpen(true)}><Icon name="users" size={17} /> ดูโพยเพื่อน</button>
+      </footer>
+      </div>
+      {picksOpen && <RacePicks round={round} profiles={profiles} userId={userId} onClose={() => setPicksOpen(false)} />}
+    </section>
   );
 }
 

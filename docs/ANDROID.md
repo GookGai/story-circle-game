@@ -26,7 +26,19 @@ Google Play still needs the owner's developer account, store listing, content/po
 
 ## Version 1.1.0 — 2026-10-28
 
-The web homepage links to the verified signed APK hosted on GitHub Releases. `frontend/src/utils/androidRelease.js` holds the displayed version, size and download URL; update it after publishing and verifying each new signed release. The download panel is hidden in native builds. APK bytes are served by GitHub rather than the Railway app.
+The web homepage links to the verified signed APK hosted on GitHub Releases. It reads `/api/app/android`; `frontend/src/utils/androidRelease.js` remains a previously published fallback if the metadata request fails. The download panel is hidden in native builds. APK bytes are served by GitHub rather than the Railway app.
+
+## App update notices — 1.2.0
+
+Visual thesis: a quiet navy/apricot notice above the existing app, with two clear 48px actions and no modal interruption.
+Content plan: new version, short release note, “ไว้ทีหลัง” / “อัปเดตเลย”, then a one-line explanation that installation keeps existing app data.
+Interaction thesis: detect at launch/resume, wait for a safe game phase, let the user choose when to leave for installation.
+
+The native app gets its installed version/build from Capacitor App and checks the public, anonymous `/api/app/android` metadata endpoint. Concurrent launch/resume checks share one request, with a five-minute throttle and a five-second network timeout. Errors silently leave the game available. Release paths are pinned to this repository's version-matched HTTPS APK URL; invalid metadata, equal versions/builds and downgrades are ignored.
+
+Notices appear on non-room pages or at synced LOBBY/RESULTS/FINISHED states. Active INPUT/RACING/FORBIDDEN states, paused continuous words, unknown room states and disconnected rooms suppress the notice until a safe snapshot arrives. Accepted native game snapshots publish only room code and phase to the notice. “ไว้ทีหลัง” remembers that release/build for 24 hours; a different release can still appear. “อัปเดตเลย” opens the external Android browser and snoozes the same notice. The APK is installed by the user through Android; the app never silently installs or forces an update.
+
+Release procedure: build/sign/verify/publish the new APK first, then update `backend/src/releases/android.json` (version, actual Android versionCode, URL, size, notes, SHA256) and deploy it. This keeps the app and website pointing only to an existing downloadable release. No database, paid service or GitHub API polling is needed. APK 1.1.0 and older need one manual upgrade to 1.2.0 before they can show future notices. A newly installed current version correctly shows no update notice.
 
 Cartoon home illustration and neutral “รับบทลงโทษ” outcomes replace the former venue/drinking presentation. The mobile account control has its own row below the logo, a 48px touch target and truncated long names. Shared page spacing reads Capacitor 8's injected `--safe-area-inset-*` variables, with browser `env()` fallbacks, so headers clear the status bar/cutout and action controls clear the navigation bar. This update uses the existing signing key; install it over 1.0.0. The new layout was checked in responsive browser views; physical-phone inset behavior still needs confirmation on the user's device.
 

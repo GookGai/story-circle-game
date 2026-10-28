@@ -5,6 +5,8 @@ import { Network } from '@capacitor/network';
 import { PRODUCTION_URL } from '../utils/appLinks.mjs';
 import { isNativeApp } from '../utils/platform';
 import RoomConfirmation from './RoomConfirmation';
+import AppUpdateNotice from './AppUpdateNotice';
+import { useAppUpdate } from '../hooks/useAppUpdate';
 
 export default function NativeBridge() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export default function NativeBridge() {
   const [homeConfirmation, setHomeConfirmation] = useState(false);
   const [offline, setOffline] = useState(false);
   const [checking, setChecking] = useState(false);
+  const appUpdate = useAppUpdate();
   useEffect(() => { currentPath.current = pathname; navigation.current = navigate; }, [pathname, navigate]);
 
   const retry = useCallback(async () => {
@@ -76,6 +79,7 @@ export default function NativeBridge() {
 
   if (!isNativeApp) return null;
   return <>
+    {!offline && !homeConfirmation && <AppUpdateNotice release={appUpdate.release} onLater={appUpdate.later} onUpdate={appUpdate.update} />}
     {offline && <aside className="native-connection" role="status">
       <span>ยังเชื่อมต่อเกมไม่ได้ · ชื่อและวงยังอยู่</span>
       <button type="button" onClick={retry} disabled={checking}>{checking ? 'กำลังเชื่อมต่อ…' : 'ลองอีกครั้ง'}</button>

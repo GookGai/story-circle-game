@@ -23,6 +23,7 @@ import authRoutes from "./routes/auth.js";
 import roomRoutes from "./routes/rooms.js";
 import statsRoutes from "./routes/stats.js";
 import adminRoutes from './routes/admin.js';
+import appRoutes from './routes/app.js';
 import { recordUsage, recordUserUsage, startUsage } from './usage/store.js';
 import { sourceOf } from './usage/policy.js';
 import { GAMES } from "./party/engine.js";
@@ -79,6 +80,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/stats", statsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/app', appRoutes);
 
 // Game registry endpoint — returns all available game types
 app.get("/api/games", (_req, res) => {

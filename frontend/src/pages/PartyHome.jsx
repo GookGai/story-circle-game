@@ -6,6 +6,7 @@ import { AVATARS, getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
 import { isNativeApp } from "../utils/platform";
 import { ANDROID_RELEASE } from "../utils/androidRelease";
+import { fetchAndroidRelease } from "../utils/appUpdate.mjs";
 
 const games = [
   {
@@ -47,6 +48,13 @@ const games = [
 ];
 
 export default function PartyHome() {
+  const [androidRelease, setAndroidRelease] = useState(ANDROID_RELEASE);
+  useEffect(() => {
+    if (isNativeApp) return;
+    let disposed = false;
+    fetchAndroidRelease().then((release) => { if (release && !disposed) setAndroidRelease(release); }).catch(() => {});
+    return () => { disposed = true; };
+  }, []);
   const { code: inviteCode } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading, joinAsGuest, logout } = useAuth();
@@ -274,9 +282,9 @@ export default function PartyHome() {
               <p>เปิดเกมจากไอคอนบนมือถือ แล้วเข้าวงด้วยรหัส 6 ตัว</p>
               <small>ดาวน์โหลดแล้วเปิดไฟล์ APK เพื่อติดตั้ง · มีแอปอยู่แล้วให้ติดตั้งทับตัวเดิม</small>
             </div>
-            <a className="p-button primary" href={ANDROID_RELEASE.url}>
+            <a className="p-button primary" href={androidRelease.url}>
               <Icon name="download" size={20} />
-              <span>ดาวน์โหลดแอป Android<small>APK {ANDROID_RELEASE.version} · {ANDROID_RELEASE.size}</small></span>
+              <span>ดาวน์โหลดแอป Android<small>APK {androidRelease.version} · {androidRelease.size}</small></span>
             </a>
           </section>
         )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "./useSocket";
 import { canRetryStart } from "../utils/commandRetry";
+import { isNativeApp } from "../utils/platform";
 
 export function useParty(code) {
   const { socket, connected } = useSocket();
@@ -21,6 +22,9 @@ export function useParty(code) {
       )
         return;
       latest.current = data;
+      if (isNativeApp) window.dispatchEvent(new CustomEvent('storycircle:party-state', {
+        detail: { code, phase: data.state.phase, resumePhase: data.state.resumePhase },
+      }));
       setSnapshot(data);
       setOffset(data.serverNow - Date.now());
     },

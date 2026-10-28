@@ -335,15 +335,26 @@ try {
   await ready(clients);
   await start(host, "PANIC_JUMP");
   const jumpRound = host.state.state.round.id;
+  const timingRound = structuredClone(host.state.state.round);
+  assert.equal(timingRound.jumpFlow, 3);
+  assert.ok(timingRound.targetNumber >= 2 && timingRound.targetNumber <= 5);
+  assert.ok(timingRound.penaltyCount >= 1 && timingRound.penaltyCount <= Math.floor(count / 2));
   await Promise.all(clients.map((c) => command(c, "JUMP")));
   await waitUntil(() => clients.every((c) => c.state.state.round.opened?.length === count), 3000);
   assert.equal(host.state.state.phase, 'INPUT');
   assert.equal(host.state.state.round.result, undefined);
   assert.ok(host.state.state.round.revealAt > host.state.state.round.deadlineAt);
+  assert.equal(host.state.state.round.targetAt, timingRound.targetAt);
+  assert.equal(host.state.state.round.deadlineAt, timingRound.deadlineAt);
   assert.equal(host.state.state.round.actions, undefined);
+  for (const c of clients) {
+    assert.equal(c.state.state.round.myAction.pressedAt, undefined);
+    assert.equal(c.state.state.round.myAction.order, undefined);
+    assert.ok(c.state.state.round.opened.every(p => !('errorMs' in p) && !('rank' in p)));
+  }
   await results(clients);
   assert.equal(
-    new Set(host.state.state.round.result.players.map((p) => p.order)).size,
+    new Set(host.state.state.round.result.players.map((p) => p.userId)).size,
     count,
   );
   assert.ok(
@@ -360,7 +371,7 @@ try {
   assert.ok(nextReplies.every((r) => !r.ok));
   assert.equal(host.state.state.round.id, jumpRound);
   report.push(
-    `${count}-client simultaneous jumps, unique ordering, score/result consistency and NEXT burst`,
+    `${count}-client timing jumps, fixed random target/deadline, private timing, score/result consistency and NEXT burst`,
   );
   if (!production) {
     await ready(clients);

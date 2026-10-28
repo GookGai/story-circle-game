@@ -6,6 +6,18 @@
 .parachute-header > div { min-width: 0; flex: 1; }
 .parachute-header small { display: block; font-size: 10px; color: #bdcce0; }
 .parachute-header strong { font-size: 16px; }
+.parachute-header em { font-style: normal; color: #ffb66e; font-size: 24px; }
+.jump-penalty-rule { display: block; font-size: 10px; color: #bdcce0; margin-top: 2px; }.jump-penalty-rule b { color: #ffce9b; margin-right: 3px; }
+.jump-timing-cue { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.jump-sky-caption .jump-cue-label { font-size: 11px; margin: 0; }.jump-sky-caption .jump-cue-note { font-size: 10px; margin: 0; }
+.jump-countdown { width: 112px; height: 112px; position: relative; display: grid; place-items: center; margin: 12px 0; }
+.jump-countdown b { font: 750 44px/1 Inter,sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -2px; z-index: 1; }
+.jump-countdown i { position: absolute; inset: 0; border: 3px solid #2e4c6350; border-radius: 50%; }.jump-countdown .jump-moving-ring { border-color: #b16e37; transition: transform .1s linear; }.jump-countdown.preparing .jump-moving-ring { opacity: .25; }
+.target-pulse .jump-countdown { color: #683b14; background: #ffddb2; border-radius: 50%; box-shadow: 0 0 0 12px #ffddb24d; }
+.timing-sky .jump-actors { top: 190px; }.timing-sky.phase-landing .jump-actors,.timing-sky.phase-waiting_result .jump-actors,.timing-sky.phase-results .jump-actors { top: 64px; }
+.timing-results > div { animation: jump-result-in .35s both; animation-delay: var(--reveal-delay); }
+.parachute-results .jump-actors { bottom: 24px; }
+@keyframes jump-result-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .parachute-clock { text-align: center; min-width: 38px; }
 .parachute-clock b { font: 700 26px/1.1 Inter,sans-serif; font-variant-numeric: tabular-nums; }
 .parachute-header .race-skip { color: #dae5ee; border-color: #ffffff35; }
@@ -54,3 +66,11 @@
   .parachute-header { grid-column: 1/-1; }.jump-sky { grid-column: 1; grid-row: 2; }.jump-live-roster { display: none; }.parachute-controls { grid-column: 2; grid-row: 2; align-self: center; }.jump-sky-caption strong { font-size: 13px; }.jump-sky-caption span { font-size: 9px; }.jump-person-avatar { font-size: 22px; }.jump-canopy { width: 34px; height: 28px; }.parachute-open strong { font-size: 17px; }
 }
 @media (prefers-reduced-motion:reduce) { .jump-cloud,.jump-plane { animation: none; }.jump-person,.jump-canopy,.jump-height-meter > span { transition: none; } }
+@media (max-height:700px) {
+  .jump-countdown { width: 78px; height: 78px; margin: 10px 0; }.jump-countdown b { font-size: 34px; }.jump-timing-cue { gap: 2px; }.timing-sky .jump-actors { top: 140px; }.jump-sky-caption .jump-cue-note { font-size: 9px; }
+}
+@media (max-width:1024px) and (max-height:500px) and (orientation:landscape) {
+  .timing-sky .jump-sky-caption { left: 10px; right: auto; width: 135px; top: 10px; }.timing-sky .jump-actors { top: 30px; left: 150px; }.timing-sky.phase-landing .jump-sky-caption,.timing-sky.phase-results .jump-sky-caption,.timing-sky.phase-waiting_result .jump-sky-caption { right: 10px; width: auto; }.timing-sky.phase-landing .jump-actors,.timing-sky.phase-results .jump-actors,.timing-sky.phase-waiting_result .jump-actors { left: 0; top: 64px; }
+  .jump-cue-note { max-width: 125px; }.parachute-header em { font-size: 18px; }
+}
+@media (prefers-reduced-motion:reduce) { .jump-countdown .jump-moving-ring { transition: none; }.timing-results > div { animation: none; } }

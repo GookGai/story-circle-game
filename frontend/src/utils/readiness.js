@@ -14,7 +14,7 @@ export function readiness({ state, members, hostId, userId }) {
   );
   const waiting = seats.filter((p) => p.status === "waiting");
   const ready = seats.filter((p) => p.status === "ready");
-  const minimum = state.config.gameType === "PANIC_JUMP" ? 3 : 2;
+  const minimum = 2;
   const missing = Math.max(0, minimum - playing.length);
   const me = seats.find((p) => p.id === userId);
   const finished =

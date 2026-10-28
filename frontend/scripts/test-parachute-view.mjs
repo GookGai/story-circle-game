@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parachuteView } from '../src/utils/parachuteView.mjs';
+import { parachuteView, timingLabel } from '../src/utils/parachuteView.mjs';
 const round=()=>({jumpFlow:2,startsAt:3000,deadlineAt:15000,landingAt:15000,revealAt:18000,flightWindowMs:12000,participantIds:['p0','p1','p2'],opened:[],quota:1});
 test('parachute presentation separates countdown, freefall, landing and result acknowledgement',()=>{
   const r=round();
@@ -35,4 +35,23 @@ test('final scene follows confirmed result records even when old opener metadata
   const model=parachuteView(r,18000);
   assert.deepEqual(model.players.map(p=>p.opened),[true,true,false]);
   assert.ok(model.players.every(p=>p.landed));
+});
+test('timing countdown and ring meet at the persisted target without changing speed',()=>{
+  const r={...round(),jumpFlow:3,countdownFrom:7,targetNumber:3,targetAt:7000,deadlineAt:10000,landingAt:10000,revealAt:13000,flightWindowMs:7000};
+  assert.equal(parachuteView(r,3000).countdown,7);
+  assert.equal(parachuteView(r,6000).countdown,4);
+  const target=parachuteView(r,7000);
+  assert.equal(target.countdown,3);assert.equal(target.ringScale,1);assert.equal(target.targetPulse,true);
+  assert.equal(parachuteView(r,8000).targetPulse,false);
+  assert.equal(parachuteView(r,10000).phase,'LANDING');
+  assert.equal(parachuteView(r,13000).phase,'WAITING_RESULT');
+  assert.equal(target.players.some(p=>'rank' in p||'errorMs' in p),false);
+});
+test('timing results show symmetric human-readable errors and recover opened participants by rank',()=>{
+  assert.equal(timingLabel({signedErrorMs:-180}),'เร็ว 0.18 วิ');
+  assert.equal(timingLabel({signedErrorMs:180}),'ช้า 0.18 วิ');
+  assert.equal(timingLabel({signedErrorMs:0}),'ตรงเป้าพอดี');
+  assert.equal(timingLabel({missed:true}),'ไม่ได้กางร่ม');
+  const r=round();r.jumpFlow=3;r.result={players:[{userId:'p0',rank:1,missed:false},{userId:'p1',rank:null,missed:true}]};
+  assert.deepEqual(parachuteView(r,18000).players.map(p=>p.opened),[true,false,false]);
 });

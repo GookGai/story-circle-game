@@ -119,7 +119,7 @@ function Settings({ config, games, command, disabled, forbiddenConfig }) {
           >
             <Icon name={game.icon} size={25} />
             <strong>{game.name}</strong>
-            <span>{game.type === "PANIC_JUMP" ? "3–10 คน" : "2–10 คน"}</span>
+            <span>2–10 คน</span>
             {config.gameType === game.type && <Icon name="check" size={17} />}
           </button>
         ))}
@@ -162,7 +162,7 @@ function Settings({ config, games, command, disabled, forbiddenConfig }) {
             </label>
           </div>
           <p className="field-note">
-            วง 2 คนจะเล่นโหมดใจตรงกันแทนโหวตข้างน้อย · ร่มชูชีพเริ่มที่ 3 คน
+            วง 2 คนจะเล่นโหมดใจตรงกันแทนโหวตข้างน้อย · ร่มชูชีพเล่นได้ตั้งแต่ 2 คน
           </p>
           <details className="custom-question">
             <summary>อยากถามเรื่องในวง? เขียนคำถามเอง</summary>
@@ -328,7 +328,7 @@ function Results({ state, userId }) {
     result = round.result;
   if (round.gameType === "HORSE_RACE" && !result.skipped)
     return <HorseResults state={state} userId={userId} />;
-  if (round.gameType === 'PANIC_JUMP' && round.jumpFlow === 2 && !result.skipped)
+  if (round.gameType === 'PANIC_JUMP' && round.jumpFlow >= 2 && !result.skipped)
     return <ParachuteResults state={state} userId={userId} />;
   const me = result.players.find((p) => p.userId === userId);
   return (
@@ -836,6 +836,7 @@ export default function PartyRoom() {
                     />
                   ) : (
                     <ParachuteGame
+                      serverOffset={offset}
                       round={round}
                       error={error}
                       profiles={state.profiles}

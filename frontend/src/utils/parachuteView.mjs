@@ -8,7 +8,7 @@ export function parachuteView(round, now) {
   const opened = new Map((round.opened || []).map((p) => [p.userId, p.openedAt]));
   if (round.result) {
     opened.clear();
-    for (const p of round.result.players || []) if (!p.missed && p.order) opened.set(p.userId, round.startsAt);
+    for (const p of round.result.players || []) if (!p.missed && (p.order || p.rank)) opened.set(p.userId, round.startsAt);
   }
   const ids = round.participantIds || [];
   const landing = phase === 'RESULTS' ? 1 : clamp((now - landingAt) / Math.max(1, revealAt - landingAt));
@@ -26,5 +26,15 @@ export function parachuteView(round, now) {
     return { id, opened: opened.has(id), x: edge + index / Math.max(1, ids.length - 1) * (100 - 2 * edge), y: Math.max(16, Math.min(84, y)), landed: landing > .85 };
   });
   const clock = phase === 'PREPARING' ? round.startsAt : phase === 'WATCHING' ? landingAt : ['LANDING','WAITING_RESULT'].includes(phase) ? revealAt : round.deadlineAt;
-  return { phase, players, openedCount: opened.size, seconds: Math.max(0, Math.ceil((clock - now) / 1000)), progress: clamp((now - round.startsAt) / duration), landing };
+  const countdown = Math.max(0, Math.min(round.countdownFrom || 7, (round.deadlineAt - now) / 1000));
+  const targetDelta = now - (round.targetAt || 0);
+  return { phase, players, openedCount: opened.size, seconds: Math.max(0, Math.ceil((clock - now) / 1000)), progress: clamp((now - round.startsAt) / duration), landing,
+    countdown, targetPulse: round.jumpFlow === 3 && phase === 'FALLING' && Math.abs(targetDelta) < 150,
+    ringScale: 1 + Math.max(-.35, Math.min(.65, -targetDelta / 1600)) };
+}
+
+export function timingLabel(player) {
+  if (player.missed) return 'ไม่ได้กางร่ม';
+  const delta = player.signedErrorMs || 0;
+  return delta === 0 ? 'ตรงเป้าพอดี' : `${delta < 0 ? 'เร็ว' : 'ช้า'} ${(Math.abs(delta) / 1000).toFixed(2)} วิ`;
 }

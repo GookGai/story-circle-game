@@ -80,6 +80,12 @@ const hash = (value) => {
     n ^= c.charCodeAt(0);
     n = Math.imul(n, 16777619);
   }
+  // Mix adjacent horse IDs too; plain FNV leaves their opinion buckets almost equal.
+  n ^= n >>> 16;
+  n = Math.imul(n, 0x7feb352d);
+  n ^= n >>> 15;
+  n = Math.imul(n, 0x846ca68b);
+  n ^= n >>> 16;
   return (n >>> 0) / 4294967296;
 };
 export function presentHorse(horse) {

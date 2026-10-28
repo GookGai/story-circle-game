@@ -54,6 +54,15 @@ test("horse views expose guru recommendations while keeping stats and skills pri
   advanceState(t.state, t.state.round.raceEndsAt);
   check(projectState(t.state, 'p0'));
 });
+test('guru opinions vary across the field instead of assigning adjacent horse IDs identical levels', () => {
+  const horses = makeHorseField(() => 0.5);
+  let varied = 0;
+  for (let round = 0; round < 64; round++) for (const g of makeGurus(`opinion-${round}`, horses)) {
+    const ordinary = horses.filter((h) => h.id !== g.pickId && h.id !== g.avoidId).map((h) => g.ratings[h.id]);
+    if (new Set(ordinary).size > 1) varied++;
+  }
+  assert.ok(varied > 100);
+});
 
 test("restored horse rounds regenerate stable guru opinions from private data before projection", () => {
   const t = setup(2, 'HORSE_RACE');

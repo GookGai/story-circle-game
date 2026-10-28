@@ -1,27 +1,27 @@
-/* Story Circle / Night table — one warm accent, readable mobile play. */
+/* Story Circle / Friends at play — one warm accent, readable mobile play. */
 :root {
-  --bg-primary: #171815;
-  --bg-secondary: #20211d;
-  --bg-card: #22231f;
-  --bg-card-hover: #2b2c26;
-  --text-primary: #f5f1e8;
-  --text-secondary: #b4b5a7;
-  --text-muted: #919487;
-  --neon-pink: #f58b62;
-  --neon-orange: #f58b62;
-  --neon-cyan: #f5b18d;
-  --neon-green: #bcca9c;
+  --bg-primary: #151e32;
+  --bg-secondary: #1b2740;
+  --bg-card: #1e2a43;
+  --bg-card-hover: #293955;
+  --text-primary: #f5f4ef;
+  --text-secondary: #b7c4d8;
+  --text-muted: #a1aec3;
+  --neon-pink: #ffb66e;
+  --neon-orange: #ffb66e;
+  --neon-cyan: #a9d8ed;
+  --neon-green: #b9d7bd;
   --neon-purple: #bcb0d5;
   --neon-yellow: #e4c989;
-  --gradient-primary: linear-gradient(135deg, #f58b62, #f58b62);
-  --gradient-secondary: linear-gradient(135deg, #f5b18d, #f5b18d);
-  --accent: #f58b62;
-  --cream: #f5f1e8;
+  --gradient-primary: linear-gradient(135deg, #ffb66e, #ffb66e);
+  --gradient-secondary: linear-gradient(135deg, #a9d8ed, #a9d8ed);
+  --accent: #ffb66e;
+  --cream: #f5f4ef;
   --line: #ffffff16;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 body {
-  background: #171815;
+  background: #151e32;
   color: var(--cream);
   font-weight: 400;
 }
@@ -94,7 +94,7 @@ h3 {
   display: grid;
   place-items: center;
   background: var(--accent);
-  color: #20211d;
+  color: #1b2740;
   border-radius: 10px;
   transform: rotate(-8deg);
 }
@@ -110,7 +110,7 @@ h3 {
   display: inline-block;
   border-radius: 100%;
   background: var(--accent);
-  box-shadow: 0 0 0 4px #f58b6212;
+  box-shadow: 0 0 0 4px #ffb66e12;
 }
 .text-button {
   display: inline-flex;
@@ -171,12 +171,12 @@ h3 {
 }
 .p-button.primary:hover:not(:disabled) {
   background: #ffa27b;
-  box-shadow: 0 8px 28px #f58b6214;
+  box-shadow: 0 8px 28px #ffb66e14;
 }
 .p-button.translucent {
   color: var(--cream);
-  border-color: #f5f1e84a;
-  background: #17181538;
+  border-color: #f5f4ef4a;
+  background: #151e3238;
   backdrop-filter: blur(8px);
 }
 .p-button.outline {
@@ -191,9 +191,9 @@ h3 {
   width: 100%;
 }
 .p-button.ready-confirmed {
-  background: #bcca9c18;
+  background: #b9d7bd18;
   color: #c4d6a3;
-  border-color: #bcca9c40;
+  border-color: #b9d7bd40;
 }
 .p-input {
   width: 100%;
@@ -231,7 +231,7 @@ h3 {
   align-items: center;
   justify-content: space-between;
   padding: 0 5%;
-  background: #171815;
+  background: #151e32;
 }
 .home-nav .nav-actions {
   display: flex;
@@ -252,13 +252,13 @@ h3 {
   z-index: -1;
 }
 .hero-photograph {
-  background: url("/images/table-night.webp") center center/cover no-repeat;
+  background: url("/images/game-circle.webp") center center/cover no-repeat;
   animation: photo-settle 1.8s var(--ease) both;
 }
 .hero-shade {
   background:
-    linear-gradient(90deg, #11130ff0 0%, #151610b3 37%, #12130e16 78%),
-    linear-gradient(0deg, #1415109c 0%, transparent 40%, #1718150d 100%);
+    linear-gradient(90deg, #151e32c7 0%, #151e3280 35%, #151e3200 70%),
+    linear-gradient(0deg, #151e3270 0%, transparent 40%, #151e3200 100%);
 }
 .hero-content {
   height: 100%;
@@ -274,7 +274,7 @@ h3 {
   display: flex;
   align-items: center;
   gap: 13px;
-  color: #d6d7c9;
+  color: #d5dfed;
 }
 .hero-content h1 {
   font-size: clamp(58px, 6.8vw, 103px);
@@ -338,7 +338,7 @@ h3 {
   top: 16%;
   width: 135px;
   height: 135px;
-  border: 1px solid #f5f1e85c;
+  border: 1px solid #f5f4ef5c;
   border-radius: 100%;
   display: flex;
   flex-direction: column;
@@ -730,7 +730,7 @@ h3 {
 }
 .avatar-pick.selected {
   border-color: var(--accent);
-  background: #f58b6210;
+  background: #ffb66e10;
 }
 .entry-footnote {
   text-align: center;
@@ -756,7 +756,7 @@ h3 {
   font-size: 16px;
 }
 .existing-identity > svg {
-  color: #bcca9c;
+  color: #b9d7bd;
 }
 .leave-modal {
   text-align: center;
@@ -946,7 +946,7 @@ h3 {
 }
 .game-pick.selected {
   border-color: var(--accent);
-  background: #f58b620c;
+  background: #ffb66e0c;
 }
 .game-pick.selected > svg {
   color: var(--accent);
@@ -1031,7 +1031,7 @@ h3 {
   width: 8px;
   height: 8px;
   background: #737767;
-  border: 2px solid #171815;
+  border: 2px solid #151e32;
   border-radius: 50%;
 }
 .presence-dot.online {
@@ -1081,7 +1081,7 @@ h3 {
   margin: auto;
   background: #faf6ed;
   border-radius: 4px;
-  color: #20211d;
+  color: #1b2740;
 }
 .qr-paper img {
   width: 172px;
@@ -1318,7 +1318,7 @@ h3 {
 }
 .horse-option.selected {
   border-color: var(--horse-color);
-  background: color-mix(in srgb, var(--horse-color) 10%, #20211d);
+  background: color-mix(in srgb, var(--horse-color) 10%, #1b2740);
 }
 .horse-option.selected::before {
   content: "";
@@ -1428,7 +1428,7 @@ h3 {
 }
 .party-vote-option.selected {
   border-color: var(--cream);
-  box-shadow: 0 0 0 4px #f5f1e814;
+  box-shadow: 0 0 0 4px #f5f4ef14;
   transform: translateY(-3px);
 }
 .party-vote-option:disabled {
@@ -1586,7 +1586,7 @@ h3 {
   opacity: 0.5;
 }
 .my-lane .lane-track {
-  background-color: #f58b6209;
+  background-color: #ffb66e09;
 }
 .results-stage {
   text-align: center;
@@ -1598,8 +1598,8 @@ h3 {
   margin: 0 auto 22px;
   display: grid;
   place-items: center;
-  border: 1px solid #f58b6240;
-  background: #f58b620c;
+  border: 1px solid #ffb66e40;
+  background: #ffb66e0c;
   color: var(--accent);
   border-radius: 50%;
   animation: seal-in 0.5s var(--ease);
@@ -1766,7 +1766,7 @@ h3 {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  border: 1px solid #f58b6240;
+  border: 1px solid #ffb66e40;
   color: var(--accent);
   margin: 0 auto 24px;
 }
@@ -2025,16 +2025,16 @@ h3 {
   }
   .night-hero {
     height: calc(100svh - 70px);
-    min-height: 660px;
+    min-height: 620px;
     max-height: 850px;
   }
   .hero-photograph {
-    background-position: 62% center;
+    background-position: 58% center;
   }
   .hero-shade {
     background:
-      linear-gradient(90deg, #11130fe6 0%, #11130fa8 70%, #11130f6b),
-      linear-gradient(0deg, #141510a8, transparent 65%);
+      linear-gradient(90deg, #151e32db 0%, #151e32a1 55%, #151e324a),
+      linear-gradient(0deg, #151e32a8, transparent 65%);
   }
   .hero-content {
     padding: 60px 8% 90px;

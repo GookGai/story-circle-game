@@ -212,17 +212,17 @@ export default function PartyHome() {
           <div className="hero-shade" />
           <div className="hero-content">
             <span className="eyebrow hero-enter">
-              <span className="live-dot" /> GOOD FRIENDS. GREAT STORIES.
+              <span className="live-dot" /> GOOD FRIENDS. GREAT GAMES.
             </span>
             <h1 className="hero-enter">
-              คืนนี้
+              รวมเพื่อน
               <br />
-              มีเรื่อง<span className="hand-underline">ให้เล่า.</span>
+              แล้ว<span className="hand-underline">เปิดวง.</span>
             </h1>
             <p className="hero-copy hero-enter">
-              วางเรื่องงานไว้ก่อน ชวนเพื่อนเข้าวง
+              เกมสนุก ๆ สำหรับวงเพื่อนของคุณ
               <br />
-              เกมสั้น ๆ ที่ทำให้ทั้งโต๊ะสนุกไปด้วยกัน
+              คนละมือถือ เล่นและหัวเราะไปด้วยกัน
             </p>
             <div className="hero-actions hero-enter">
               {isNativeApp && rooms[0] && <Link className="p-button primary app-return" to={`/room/${rooms[0].code}`}>เล่นวงเดิมต่อ · {rooms[0].code} <Icon name="arrow" size={20} /></Link>}
@@ -253,16 +253,16 @@ export default function PartyHome() {
           <div className="hero-stamp" aria-hidden="true">
             <Icon name="spark" size={26} />
             <span>
-              LESS SCROLLING
+              PLAY TOGETHER
               <br />
-              MORE STORIES
+              LAUGH TOGETHER
             </span>
           </div>
           <a className="hero-scroll" href="#games">
             มีอะไรให้เล่นบ้าง <span>↓</span>
           </a>
           <span className="hero-caption">
-            THE BEST NIGHTS START WITH YOUR CIRCLE.
+            YOUR FRIENDS. YOUR CIRCLE.
           </span>
         </section>
 
@@ -338,7 +338,7 @@ export default function PartyHome() {
             วงก็พร้อม.
           </h2>
           <button className="p-button primary" onClick={() => open("create")}>
-            เริ่มเรื่องของคืนนี้ <Icon name="arrow" size={20} />
+            เปิดวงเล่นกับเพื่อน <Icon name="arrow" size={20} />
           </button>
           <p>เลือกพัก ข้าม หรือเล่นต่อได้ตามจังหวะของวง</p>
         </section>

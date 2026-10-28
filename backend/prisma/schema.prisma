@@ -49,7 +49,7 @@ model User {
   bets         Bet[]
   votes        Vote[]
   roomPlayers  RoomPlayer[]
-  drinkStats   DrinkStat[]
+  penaltyStats   PenaltyStat[]
   createdRooms Room[]        @relation("HostedRooms")
   setRounds    VoteRound[]   @relation("QuestionSetter")
   panicJumps   PanicJumpAction[]
@@ -74,7 +74,7 @@ model Room {
   players        RoomPlayer[]
   horseRaces     HorseRace[]
   voteRounds     VoteRound[]
-  drinkStats     DrinkStat[]
+  penaltyStats     PenaltyStat[]
   panicJumpGame  PanicJumpGame?
 }
 
@@ -180,9 +180,9 @@ model Vote {
   @@unique([roundId, userId])
 }
 
-// ─── Drink Stat ──────────────────────────────────────────────────────────────
+// ─── Penalty Stat ──────────────────────────────────────────────────────────────
 
-model DrinkStat {
+model PenaltyStat {
   id     String @id @default(uuid())
   userId String
   roomId String
@@ -194,6 +194,7 @@ model DrinkStat {
 
   @@unique([userId, roomId])
   @@index([roomId])
+  @@map("DrinkStat")
 }
 
 // ─── Panic Jump ──────────────────────────────────────────────────────────────

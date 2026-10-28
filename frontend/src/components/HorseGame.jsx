@@ -145,7 +145,7 @@ function Gurus({ round, command, disabled, reveal = false }) {
               {reveal ? (
                 <p>
                   เข้าอันดับ {g.rank} ·{" "}
-                  {g.hit ? "ลูกศิษย์รอด" : "ลูกศิษย์ต้องดื่ม"}
+                  {g.hit ? "ลูกศิษย์รอด" : "ลูกศิษย์รับบทลงโทษ"}
                 </p>
               ) : (
                 <>
@@ -181,7 +181,7 @@ export function HorseInput({ round, disabled, command, profiles, userId }) {
     <div className="horse-game">
       <div className="horse-rules">
         <strong>ท็อป 3 รอด</strong>
-        <span>อันดับ 4–8 ดื่ม 1 ครั้ง · ไม่ได้เลือกไม่คิดผล</span>
+        <span>อันดับ 4–8 รับบทลงโทษ · ไม่ได้เลือกไม่คิดผล</span>
       </div>
       <Gurus round={round} command={command} disabled={disabled} />
       <div className="horse-section-heading">
@@ -358,14 +358,14 @@ export function HorseResults({ state, userId }) {
   const me = result.players.find((p) => p.userId === userId);
   const groups = [
     {
-      key: "drink",
-      title: "ต้องดื่ม 1 ครั้ง",
+      key: "penalty",
+      title: "รับบทลงโทษ",
       people: result.players.filter((p) => !p.missed && !p.safe),
-      empty: "รอบนี้ไม่มีใครต้องดื่ม",
+      empty: "รอบนี้ไม่มีใครรับบทลงโทษ",
     },
     {
       key: "safe",
-      title: "รอด ไม่ต้องดื่ม",
+      title: "รอดรอบนี้",
       people: result.players.filter((p) => p.safe),
       empty: "ยังไม่มีคนรอดในรอบนี้",
     },
@@ -379,21 +379,21 @@ export function HorseResults({ state, userId }) {
     <div className="horse-game horse-results">
       <span className="eyebrow">PHOTO FINISH · ROUND {state.roundNumber}</span>
       <h2>{result.title}</h2>
-      <p className="horse-footnote">ท็อป 3 รอด · อันดับ 4–8 ดื่ม 1 ครั้ง</p>
+      <p className="horse-footnote">ท็อป 3 รอด · อันดับ 4–8 รับบทลงโทษ</p>
       {me && (
         <div
-          className={`horse-personal-result ${me.missed ? "missed" : me.safe ? "safe" : "drink"}`}
+          className={`horse-personal-result ${me.missed ? "missed" : me.safe ? "safe" : "penalty"}`}
           role="status"
         >
-          <span>{me.missed ? "—" : me.safe ? "✦" : "ชนแก้ว!"}</span>
+          <span aria-hidden="true">{me.missed ? "—" : me.safe ? "✦" : "!"}</span>
           <div>
             <small>ผลของคุณ</small>
             <strong>
               {me.missed
                 ? "ไม่ได้เลือก ไม่คิดผล"
                 : me.safe
-                  ? "คุณรอด ไม่ต้องดื่ม"
-                  : "คุณต้องดื่ม 1 ครั้ง"}
+                  ? "คุณรอดรอบนี้"
+                  : "รับบทลงโทษ"}
             </strong>
             <p>
               {me.rank
@@ -426,7 +426,7 @@ export function HorseResults({ state, userId }) {
                           : "ไม่ได้ส่งตัวเลือกในเวลา"}
                       </small>
                     </div>
-                    {p.rank && <b>{p.safe ? "รอด" : "ดื่ม 1 ครั้ง"}</b>}
+                    {p.rank && <b>{p.safe ? "รอด" : "รับบทลงโทษ"}</b>}
                   </div>
                 ))
               ) : (
@@ -438,7 +438,7 @@ export function HorseResults({ state, userId }) {
       <section className="horse-final-board">
         <div className="horse-section-heading">
           <h3>อันดับเข้าเส้นชัย</h3>
-          <span>1–3 รอด / 4–8 ดื่ม</span>
+          <span>1–3 รอด / 4–8 รับบทลงโทษ</span>
         </div>
         {round.rankings.map((r) => {
           const horse = round.horses.find((h) => h.id === r.id);
@@ -462,7 +462,7 @@ export function HorseResults({ state, userId }) {
                 />
               </div>
               <span className="horse-rank-outcome">
-                {r.rank <= 3 ? "รอด" : "ดื่ม 1 ครั้ง"}
+                {r.rank <= 3 ? "รอด" : "รับบทลงโทษ"}
               </span>
             </div>
           );

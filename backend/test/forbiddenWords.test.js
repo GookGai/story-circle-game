@@ -249,7 +249,7 @@ test("end and expiry score once, and ending while paused preserves valid capture
   t.send("END");
   assert.equal(t.state.phase, "FINISHED");
   assert.equal(t.state.scores.p0.FORBIDDEN_WORD, 1);
-  assert.equal(t.state.scores.p1.drinks, 1);
+  assert.equal(t.state.scores.p1.penalties, 1);
   assert.equal(
     t.state.round.result.players.find((p) => p.userId === "p1").hits,
     1,

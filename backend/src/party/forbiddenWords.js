@@ -24,12 +24,12 @@ const decks = [
   [
     "friends",
     "เรื่องของเพื่อน",
-    "เพื่อน,แฟน,แฟนเก่า,โสด,คิดถึง,รัก,แต่งงาน,เดต,ทัก,โทร,ไลน์,กลุ่ม,เมา,กลับบ้าน,นอน,ตื่น,เที่ยว,รูป,ถ่าย,จำได้",
+    "เพื่อน,แฟน,แฟนเก่า,โสด,คิดถึง,รัก,แต่งงาน,เดต,ทัก,โทร,ไลน์,กลุ่ม,ขำ,กลับบ้าน,นอน,ตื่น,เที่ยว,รูป,ถ่าย,จำได้",
   ],
   [
     "table",
-    "รอบโต๊ะ",
-    "ชนแก้ว,สั่งเพิ่ม,เช็กบิล,ห้องน้ำ,โต๊ะ,เก้าอี้,แก้ว,ขวด,จาน,ช้อน,หลอด,เพลง,นักร้อง,เสียงดัง,เต้น,ร้าน,พนักงาน,เงิน,หาร,รอ",
+    "วงเล่นเกม",
+    "ตบมือ,เริ่มใหม่,สลับที่,ห้องน้ำ,โต๊ะ,เก้าอี้,การ์ด,ลูกเต๋า,จาน,ช้อน,ขนม,เพลง,นักร้อง,เสียงดัง,เต้น,เพื่อนบ้าน,โซฟา,คะแนน,แบ่งทีม,รอ",
   ],
   [
     "travel",
@@ -59,6 +59,7 @@ const prompts = [
 
 export function defaultForbiddenConfig() {
   return {
+    builtinDeckVersion: 2,
     durationMinutes: 10,
     wordCount: 1,
     autoRotate: true,
@@ -75,7 +76,15 @@ export function defaultForbiddenConfig() {
   };
 }
 export function ensureForbiddenConfig(state) {
-  return (state.forbiddenConfig ||= defaultForbiddenConfig());
+  const config = (state.forbiddenConfig ||= defaultForbiddenConfig());
+  if (config.builtinDeckVersion !== 2) {
+    const defaults = new Map(defaultForbiddenConfig().categories.map((c) => [c.id, c]));
+    config.categories = config.categories.map((c) =>
+      c.custom === false && defaults.has(c.id) ? defaults.get(c.id) : c,
+    );
+    config.builtinDeckVersion = 2;
+  }
+  return config;
 }
 const tokens = (w) => [w.text, ...w.aliases].map(normalize);
 const conflicts = (w, used) => tokens(w).some((t) => used.has(t));

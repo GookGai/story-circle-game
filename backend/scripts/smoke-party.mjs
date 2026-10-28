@@ -216,7 +216,7 @@ try {
   await results(clients);
   assert.ok(
     host.state.state.round.result.players.every(
-      (p) => p.mustDrink === p.rank > 3 && p.drinks === (p.rank > 3 ? 1 : 0),
+      (p) => p.hasPenalty === p.rank > 3 && p.penalties === (p.rank > 3 ? 1 : 0),
     ),
   );
   assert.ok(

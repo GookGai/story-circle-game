@@ -21,7 +21,7 @@ export function readiness({ state, members, hostId, userId }) {
     state.phase === "RESULTS" && state.roundNumber >= state.config.totalRounds;
   const host = seats.find((p) => p.id === hostId);
   let message;
-  if (finished) message = "ครบทุกตาแล้ว เจ้าของวงเปิดสรุปคืนนี้ได้เลย";
+  if (finished) message = "ครบทุกตาแล้ว เจ้าของวงเปิดสรุปวงนี้ได้เลย";
   else if (missing)
     message = `ชวนเพื่อนเข้ามาหรือกลับมาเล่นอีก ${missing} คน · เกมนี้ใช้ขั้นต่ำ ${minimum} คน`;
   else if (waiting.length)

@@ -12,11 +12,11 @@ Implementation: persisted, versioned room runtime; transactional commands; serve
 
 Visual thesis: a cream race programme on the existing dark table, with eight illustrated horse identities carried through selection, race lanes and results.
 
-Content plan: explicit top-three rule; three opinionated gurus; selectable profiles with actual abilities, form and named supporters; readable lanes; personal outcome and named drink/safe/missed groups; full finish order and guru reactions.
+Content plan: explicit top-three rule; three opinionated gurus; selectable profiles with actual abilities, form and named supporters; readable lanes; personal outcome and named penalty/safe/missed groups; full finish order and guru reactions.
 
 Interaction thesis: one-tap guru following, durable selected-horse feedback, and smooth movement in fixed race lanes, respecting reduced motion. Players have 45 seconds to read and pick; the host can start early once everyone chooses.
 
-Gurus are generated locally once per round and persist across reconnects. They do not know the simulated result and incur no AI cost. Rankings 1–3 are safe; 4–8 drink once. Missing players receive no result. The server records explicit drink outcomes and counts them exactly once. No database migration or extra infrastructure is needed.
+Gurus are generated locally once per round and persist across reconnects. They do not know the simulated result and incur no AI cost. Rankings 1–3 are safe; 4–8 receive a penalty marker. Missing players receive no result. The server records explicit penalty outcomes and counts them exactly once. No database migration or extra infrastructure is needed.
 
 ## Ready flow clarity — 19 October 2026
 

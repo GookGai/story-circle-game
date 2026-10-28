@@ -360,7 +360,7 @@
   padding: 22px;
   margin: 22px 0;
 }
-.horse-personal-result.drink {
+.horse-personal-result.penalty {
   background: #f4d9c8;
   color: #8b391f;
 }
@@ -399,7 +399,7 @@
   border-bottom: 2px solid #c9cdbb;
   padding-bottom: 12px;
 }
-.horse-outcome.drink h3 {
+.horse-outcome.penalty h3 {
   color: #a34b2d;
   border-color: #cc9072;
 }
@@ -443,7 +443,7 @@
   font-size: 12px;
   white-space: nowrap;
 }
-.horse-outcome.drink .horse-result-person > b {
+.horse-outcome.penalty .horse-result-person > b {
   color: #a34b2d;
 }
 .horse-standing {

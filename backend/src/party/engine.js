@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { normalizePenaltyState } from "./penalties.js";
 import { simulateRace } from "../utils/horseEngine.js";
 import { pickQuestion } from "./questions.js";
 import { makeHorseField, makeGurus, presentHorse } from "./horseField.js";
@@ -22,7 +23,7 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 10,
     icon: "secret",
-    rule: "เห็นคำเพื่อน แต่ไม่เห็นคำตัวเอง · คำเปลี่ยนทุก 180 วินาที · จับได้ดื่ม 1 ครั้ง",
+    rule: "เห็นคำเพื่อน แต่ไม่เห็นคำตัวเอง · คำเปลี่ยนทุก 180 วินาที · จับได้ รับบทลงโทษ",
   },
   {
     type: "MIXED",
@@ -49,7 +50,7 @@ export const GAMES = [
     minPlayers: 2,
     maxPlayers: 10,
     icon: "horse",
-    rule: "เลือกม้า 1 ตัว · อันดับ 1–3 รอด · อันดับ 4–8 ดื่ม 1 ครั้ง",
+    rule: "เลือกม้า 1 ตัว · อันดับ 1–3 รอด · อันดับ 4–8 รับบทลงโทษ",
   },
   {
     type: "PANIC_JUMP",
@@ -101,6 +102,7 @@ function points(state, id, game, amount, wins = 0) {
 }
 
 export function finish(state, now, skipped = false) {
+  normalizePenaltyState(state);
   const round = state.round;
   if (
     round?.gameType === "FORBIDDEN_WORD" &&
@@ -110,8 +112,8 @@ export function finish(state, now, skipped = false) {
     round.result = forbiddenResult(state);
     for (const p of round.result.players) {
       points(state, p.userId, round.gameType, p.points);
-      state.scores[p.userId].drinks =
-        (state.scores[p.userId].drinks || 0) + p.hits;
+      state.scores[p.userId].penalties =
+        (state.scores[p.userId].penalties || 0) + p.hits;
     }
     round.finishedAt = now;
     state.history.push({
@@ -150,20 +152,20 @@ export function finish(state, now, skipped = false) {
         points: amount,
         safe: !!safe,
         missed: !rank,
-        mustDrink: !!rank && !safe,
-        drinks: !!rank && !safe ? 1 : 0,
+        hasPenalty: !!rank && !safe,
+        penalties: !!rank && !safe ? 1 : 0,
         horseName: round.horses.find((h) => h.id === choice)?.name || null,
         reason: rank
-          ? `อันดับ ${rank} · ${safe ? "รอด ไม่ต้องดื่ม" : "ต้องดื่ม 1 ครั้ง"}`
+          ? `อันดับ ${rank} · ${safe ? "รอดรอบนี้" : "รับบทลงโทษ"}`
           : "ไม่ได้เลือก · ไม่คิดผลรอบนี้",
       });
     }
     round.result = {
       title: `${round.rankings[0].name} เข้าเส้นชัย!`,
       description:
-        "ม้าอันดับ 1–3 รอด · อันดับ 4–8 ดื่ม 1 ครั้ง · ไม่ได้เลือกไม่คิดผล",
+        "ม้าอันดับ 1–3 รอด · อันดับ 4–8 รับบทลงโทษ · ไม่ได้เลือกไม่คิดผล",
       players: results,
-      drinkerIds: results.filter((p) => p.mustDrink).map((p) => p.userId),
+      penaltyIds: results.filter((p) => p.hasPenalty).map((p) => p.userId),
       safeIds: results.filter((p) => p.safe).map((p) => p.userId),
       gurus: (round.gurus || []).map((g) => ({
         ...g,
@@ -172,9 +174,9 @@ export function finish(state, now, skipped = false) {
       })),
     };
     for (const player of results)
-      if (player.mustDrink)
-        state.scores[player.userId].drinks =
-          (state.scores[player.userId].drinks || 0) + 1;
+      if (player.hasPenalty)
+        state.scores[player.userId].penalties =
+          (state.scores[player.userId].penalties || 0) + 1;
   } else if (round.gameType === "MINORITY_VOTE") {
     const values = Object.values(round.actions);
     const a = values.filter((v) => v.choice === "A").length;
@@ -379,6 +381,7 @@ function startRound(state, ctx) {
 
 export function applyCommand(original, command, ctx) {
   const state = structuredClone(original || initialState());
+  normalizePenaltyState(state);
   const { type, roundId } = command;
   if (!ctx.members.some((p) => p.id === ctx.userId))
     fail("คุณไม่ได้อยู่ในวงนี้", "NOT_MEMBER");
@@ -604,6 +607,7 @@ export function applyCommand(original, command, ctx) {
 // millisecond jump ordering. Private runtime never leaves the server wholesale.
 export function projectState(state, userId) {
   const result = structuredClone(state || initialState());
+  normalizePenaltyState(result);
   if (result.config.gameType === "FORBIDDEN_WORD")
     ensureForbiddenConfig(result);
   delete result.commands;

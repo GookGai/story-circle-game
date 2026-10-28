@@ -253,7 +253,7 @@ export function ForbiddenGame({
               : resting
                 ? "คุณกำลังพัก"
                 : hit
-                  ? "คุณโดน Kill · ดื่ม 1 ครั้ง"
+                  ? "รับบทลงโทษ"
                   : waiting
                     ? "รอเจ้าวงเพิ่มหรือเปิดหมวดคำ"
                     : now < me.activeAt
@@ -431,7 +431,7 @@ export function ForbiddenGame({
                   “{e.word}” ·{" "}
                   {e.voided
                     ? "ยกเลิกผลแล้ว"
-                    : `${name(e.targetId)} ดื่ม 1 ครั้ง`}
+                    : `${name(e.targetId)} รับบทลงโทษ`}
                 </p>
                 <small>
                   {e.disputed && !e.voided

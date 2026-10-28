@@ -458,16 +458,16 @@ function Summary({ state, host, command, disabled, code }) {
     (a, b) => (b[1][selected] || 0) - (a[1][selected] || 0),
   );
   async function share() {
-    const text = `คืนนี้ที่ Story Circle · เล่นด้วยกัน ${state.history.filter((r) => !r.skipped).length} รอบ\n${state.history
+    const text = `วงนี้ที่ Story Circle · เล่นด้วยกัน ${state.history.filter((r) => !r.skipped).length} รอบ\n${state.history
       .filter((r) => !r.skipped)
       .slice(-3)
       .map((r) => `• ${r.title}`)
       .join("\n")}\nมาเปิดวงกันที่ ${publicOrigin}`;
     try {
-      if (isNativeApp) await Share.share({ title: "Story Circle · เรื่องของคืนนี้", text });
+      if (isNativeApp) await Share.share({ title: "Story Circle · โมเมนต์ของวง", text });
       else if (navigator.share)
         await navigator.share({
-          title: "Story Circle · เรื่องของคืนนี้",
+          title: "Story Circle · โมเมนต์ของวง",
           text,
         });
       else {
@@ -483,9 +483,9 @@ function Summary({ state, host, command, disabled, code }) {
       <div className="summary-orbit">
         <Icon name="trophy" size={55} />
       </div>
-      <span className="eyebrow">THAT WAS A GOOD NIGHT.</span>
+      <span className="eyebrow">THAT WAS A GOOD GAME.</span>
       <h1>
-        เรื่องของคืนนี้
+        โมเมนต์ของวง
         <br />
         <span className="accent">เก็บไว้เล่าต่อ.</span>
       </h1>
@@ -543,7 +543,7 @@ function Summary({ state, host, command, disabled, code }) {
       <div className="summary-actions">
         <button className="p-button outline" onClick={share}>
           <Icon name="link" size={18} />
-          {shared || "แชร์เรื่องของคืนนี้"}
+          {shared || "แชร์โมเมนต์ของวง"}
         </button>
         {host && (
           <button
@@ -714,7 +714,7 @@ export default function PartyRoom() {
               </span>
               <h1>
                 {phase === "LOBBY"
-                  ? "คืนนี้ วงเรา."
+                  ? "วงเพื่อน พร้อมเล่น."
                   : phase === "PAUSED"
                     ? "พักแป๊บ เดี๋ยวมา."
                     : title}
@@ -792,7 +792,7 @@ export default function PartyRoom() {
                         size={32}
                       />
                       <div>
-                        <span>คืนนี้เริ่มด้วย</span>
+                        <span>รอบแรกเริ่มด้วย</span>
                         <h3>{gameLabels[state.config.gameType]?.[0]}</h3>
                         <p>
                           {state.config.gameType === "FORBIDDEN_WORD"
@@ -1032,8 +1032,8 @@ export default function PartyRoom() {
               : forbiddenSession
                 ? "เก็บคะแนนนักล่าและจำนวนโดนจับ แล้วพาทุกคนไปหน้าสรุป ไม่คิดโทษเพิ่ม"
                 : active
-                  ? "รอบที่กำลังเล่นจะไม่คิดคะแนน และทุกคนจะไปหน้าสรุปคืนนี้"
-                  : "ทุกคนจะไปหน้าสรุปคะแนนและโมเมนต์ของคืนนี้"
+                  ? "รอบที่กำลังเล่นจะไม่คิดคะแนน และทุกคนจะไปหน้าสรุปวงนี้"
+                  : "ทุกคนจะไปหน้าสรุปคะแนนและโมเมนต์ของวงนี้"
           }
           actionLabel={
             roomAction.type === "SKIP" ? "ยืนยันข้ามรอบ" : "ยืนยันจบวง"

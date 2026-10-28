@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="story_background">#171815</color>
-    <color name="story_accent">#E8A477</color>
+    <color name="story_background">#151E32</color>
+    <color name="story_accent">#FFB66E</color>
 </resources>

@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$ArtifactDirectory,
   [Parameter(Mandatory=$true)][string]$JavaHome,
+  [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.1.0',
   [string]$SigningDirectory = (Join-Path $PSScriptRoot '../.tools/android-signing'),
   [string]$OutputDirectory = (Join-Path $PSScriptRoot '../.tools/android-dist')
 )
@@ -24,7 +25,8 @@ foreach ($line in (Get-Content -LiteralPath (Join-Path $ArtifactDirectory 'SHA25
 }
 $env:STORY_CIRCLE_SIGNING_PASSWORD = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect([IO.File]::ReadAllBytes($passwordFile), $null, [Security.Cryptography.DataProtectionScope]::CurrentUser))
 try {
-  $apk = Join-Path $OutputDirectory 'story-circle-1.0.0.apk'
+  $apkName = "story-circle-$Version.apk"
+  $apk = Join-Path $OutputDirectory $apkName
   & $java -jar $apkSigner sign --ks $keystore --ks-type PKCS12 --ks-pass env:STORY_CIRCLE_SIGNING_PASSWORD --key-pass env:STORY_CIRCLE_SIGNING_PASSWORD --out $apk (Join-Path $ArtifactDirectory 'story-circle-unsigned.apk')
   if ($LASTEXITCODE -ne 0) { throw 'APK signing failed' }
   $verification = & $java -jar $apkSigner verify --verbose --print-certs $apk
@@ -34,7 +36,7 @@ try {
   $actualCertificate = [regex]::Match(($verification -join "`n"), 'Signer #1 certificate SHA-256 digest: ([a-f0-9]+)').Groups[1].Value
   if ($actualCertificate -ne $expectedCertificate) { throw 'APK signing certificate does not match the published Android App Links certificate' }
   $hash = Get-FileHash -LiteralPath $apk -Algorithm SHA256
-  [IO.File]::WriteAllText((Join-Path $OutputDirectory 'SHA256SUMS.txt'), "$($hash.Hash.ToLower())  story-circle-1.0.0.apk`n")
+  [IO.File]::WriteAllText((Join-Path $OutputDirectory 'SHA256SUMS.txt'), "$($hash.Hash.ToLower())  $apkName`n")
   Copy-Item -LiteralPath (Join-Path $ArtifactDirectory 'commit.txt') -Destination $OutputDirectory
   Write-Output "Signed and verified: $apk"
 } finally {

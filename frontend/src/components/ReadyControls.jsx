@@ -13,7 +13,7 @@ export function ReadyRollCall({ model, nextLabel, hostId, userId }) {
       <div className="roll-call-heading">
         <div>
           <span className="eyebrow">
-            {model.finished ? "จบคืนนี้ด้วยกัน" : nextLabel}
+            {model.finished ? "จบวงนี้ด้วยกัน" : nextLabel}
           </span>
           <h2>{model.finished ? "ครบวงแล้ว!" : "เช็กความพร้อม"}</h2>
         </div>
@@ -92,7 +92,7 @@ export function ReadyDock({
   const sendingReady = pendingCommand === "READY";
   const starting = ["START", "NEXT"].includes(pendingCommand);
   const startLabel = model.finished
-    ? "ดูสรุปคืนนี้"
+    ? "ดูสรุปวงนี้"
     : starting
       ? "กำลังเริ่ม…"
       : model.missing
@@ -123,7 +123,7 @@ export function ReadyDock({
             {!connected
               ? "กำลังเชื่อมต่อกลับ…"
               : model.finished
-                ? "เล่นครบแล้ว เก็บเรื่องคืนนี้กัน"
+                ? "เล่นครบแล้ว เก็บเรื่องวงนี้กัน"
                 : host
                   ? resting
                     ? "คุณพักตานี้ · ยังเริ่มให้เพื่อนได้"

@@ -24,7 +24,7 @@ test("eight distinct horse identities and three stable, opinionated gurus", () =
   }
 });
 
-test("horse results name every drinker, keep missing players neutral, and persist picks", () => {
+test("horse results name every penalized player, keep missing players neutral, and persist picks", () => {
   const t = setup(10, "HORSE_RACE");
   for (let i = 0; i < 8; i++)
     t.send("CHOOSE", { choice: i + 1 }, { userId: `p${i}` });
@@ -35,13 +35,13 @@ test("horse results name every drinker, keep missing players neutral, and persis
   assert.deepEqual(projectState(t.state, "p0").round.gurus, gurus);
   advanceState(t.state, t.state.round.raceEndsAt);
   const result = t.state.round.result;
-  assert.equal(result.drinkerIds.length, 5);
+  assert.equal(result.penaltyIds.length, 5);
   assert.equal(result.safeIds.length, 3);
   assert.equal(result.players.filter((p) => p.missed).length, 2);
   for (const p of result.players) {
-    assert.equal(p.mustDrink, !!p.rank && p.rank > 3);
-    assert.equal(p.drinks, p.mustDrink ? 1 : 0);
-    assert.equal(t.state.scores[p.userId]?.drinks || 0, p.drinks);
+    assert.equal(p.hasPenalty, !!p.rank && p.rank > 3);
+    assert.equal(p.penalties, p.hasPenalty ? 1 : 0);
+    assert.equal(t.state.scores[p.userId]?.penalties || 0, p.penalties);
   }
   assert.equal(projectState(t.state, "p0").round.picks.length, 8);
   const scores = JSON.stringify(t.state.scores);

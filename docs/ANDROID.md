@@ -26,6 +26,8 @@ Google Play still needs the owner's developer account, store listing, content/po
 
 ## Version 1.1.0 — 2026-10-28
 
+The web homepage links to the verified signed APK hosted on GitHub Releases. `frontend/src/utils/androidRelease.js` holds the displayed version, size and download URL; update it after publishing and verifying each new signed release. The download panel is hidden in native builds. APK bytes are served by GitHub rather than the Railway app.
+
 Cartoon home illustration and neutral “รับบทลงโทษ” outcomes replace the former venue/drinking presentation. The mobile account control has its own row below the logo, a 48px touch target and truncated long names. Shared page spacing reads Capacitor 8's injected `--safe-area-inset-*` variables, with browser `env()` fallbacks, so headers clear the status bar/cutout and action controls clear the navigation bar. This update uses the existing signing key; install it over 1.0.0. The new layout was checked in responsive browser views; physical-phone inset behavior still needs confirmation on the user's device.
 
 ## Trial validation — 2026-10-27

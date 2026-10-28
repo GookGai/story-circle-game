@@ -1,4 +1,5 @@
 const paths = {
+  download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
   secret: (
     <>
       <rect x="4" y="10" width="16" height="11" rx="3" />

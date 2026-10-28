@@ -5,6 +5,7 @@ import { api } from "../utils/api";
 import { AVATARS, getAvatarEmoji } from "../utils/avatars";
 import Icon from "../components/PartyIcon";
 import { isNativeApp } from "../utils/platform";
+import { ANDROID_RELEASE } from "../utils/androidRelease";
 
 const games = [
   {
@@ -258,13 +259,27 @@ export default function PartyHome() {
               LAUGH TOGETHER
             </span>
           </div>
-          <a className="hero-scroll" href="#games">
-            มีอะไรให้เล่นบ้าง <span>↓</span>
+          <a className="hero-scroll" href={isNativeApp ? "#games" : "#android-app"}>
+            {isNativeApp ? "มีอะไรให้เล่นบ้าง" : "ดาวน์โหลดแอป Android"} <span>↓</span>
           </a>
           <span className="hero-caption">
             YOUR FRIENDS. YOUR CIRCLE.
           </span>
         </section>
+
+        {!isNativeApp && (
+          <section className="android-download" id="android-app" aria-labelledby="android-title">
+            <div>
+              <h2 id="android-title">เล่นจากแอป Android ได้แล้ว</h2>
+              <p>เปิดเกมจากไอคอนบนมือถือ แล้วเข้าวงด้วยรหัส 6 ตัว</p>
+              <small>ดาวน์โหลดแล้วเปิดไฟล์ APK เพื่อติดตั้ง · มีแอปอยู่แล้วให้ติดตั้งทับตัวเดิม</small>
+            </div>
+            <a className="p-button primary" href={ANDROID_RELEASE.url}>
+              <Icon name="download" size={20} />
+              <span>ดาวน์โหลดแอป Android<small>APK {ANDROID_RELEASE.version} · {ANDROID_RELEASE.size}</small></span>
+            </a>
+          </section>
+        )}
 
         {rooms.length > 0 && (
           <section className="return-rooms">

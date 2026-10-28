@@ -42,6 +42,7 @@ test('timing countdown and ring meet at the persisted target without changing sp
   assert.equal(parachuteView(r,6000).countdown,4);
   const target=parachuteView(r,7000);
   assert.equal(target.countdown,3);assert.equal(target.ringScale,1);assert.equal(target.targetPulse,true);
+  assert.equal(parachuteView(r,6999).targetPulse,false);
   assert.equal(parachuteView(r,8000).targetPulse,false);
   assert.equal(parachuteView(r,10000).phase,'LANDING');
   assert.equal(parachuteView(r,13000).phase,'WAITING_RESULT');

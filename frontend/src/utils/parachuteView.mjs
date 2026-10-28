@@ -29,7 +29,7 @@ export function parachuteView(round, now) {
   const countdown = Math.max(0, Math.min(round.countdownFrom || 7, (round.deadlineAt - now) / 1000));
   const targetDelta = now - (round.targetAt || 0);
   return { phase, players, openedCount: opened.size, seconds: Math.max(0, Math.ceil((clock - now) / 1000)), progress: clamp((now - round.startsAt) / duration), landing,
-    countdown, targetPulse: round.jumpFlow === 3 && phase === 'FALLING' && Math.abs(targetDelta) < 150,
+    countdown, targetPulse: round.jumpFlow === 3 && phase === 'FALLING' && targetDelta >= 0 && targetDelta < 200,
     ringScale: 1 + Math.max(-.35, Math.min(.65, -targetDelta / 1600)) };
 }
 

@@ -12,7 +12,7 @@
 .jump-sky-caption .jump-cue-label { font-size: 11px; margin: 0; }.jump-sky-caption .jump-cue-note { font-size: 10px; margin: 0; }
 .jump-countdown { width: 112px; height: 112px; position: relative; display: grid; place-items: center; margin: 12px 0; }
 .jump-countdown b { font: 750 44px/1 Inter,sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -2px; z-index: 1; }
-.jump-countdown i { position: absolute; inset: 0; border: 3px solid #2e4c6350; border-radius: 50%; }.jump-countdown .jump-moving-ring { border-color: #b16e37; transition: transform .1s linear; }.jump-countdown.preparing .jump-moving-ring { opacity: .25; }
+.jump-countdown i { position: absolute; inset: 0; border: 3px solid #2e4c6350; border-radius: 50%; }.jump-countdown .jump-moving-ring { border-color: #b16e37; }.jump-countdown.preparing .jump-moving-ring { opacity: .25; }
 .target-pulse .jump-countdown { color: #683b14; background: #ffddb2; border-radius: 50%; box-shadow: 0 0 0 12px #ffddb24d; }
 .timing-sky .jump-actors { top: 190px; }.timing-sky.phase-landing .jump-actors,.timing-sky.phase-waiting_result .jump-actors,.timing-sky.phase-results .jump-actors { top: 64px; }
 .timing-results > div { animation: jump-result-in .35s both; animation-delay: var(--reveal-delay); }

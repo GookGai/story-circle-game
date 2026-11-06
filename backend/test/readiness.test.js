@@ -2,7 +2,52 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readiness, playerStatus } from "../../frontend/src/utils/readiness.js";
 import { canRetryStart } from "../../frontend/src/utils/commandRetry.js";
-import { initialState, applyCommand } from "../src/party/engine.js";
+import { initialState, applyCommand, projectState } from "../src/party/engine.js";
+
+test("open rooms keep the ready controls and scores beyond the old round limit", () => {
+  const members = [
+    { id: "host", username: "Host", online: true },
+    { id: "guest", username: "Guest", online: true },
+  ];
+  const hostId = "host";
+  let state = initialState();
+  state.config = { gameType: "MINORITY_VOTE", totalRounds: 6, category: "all", openEnded: true };
+  let now = 1_000;
+  let sequence = 0;
+  const send = (type, userId = hostId, payload = {}) => {
+    state = applyCommand(state, {
+      type, commandId: String(++sequence), expectedRevision: 0,
+      roundId: state.round?.id, ...payload,
+    }, { members, userId, hostId, revision: 0, now }).state;
+  };
+
+  for (let round = 1; round <= 20; round++) {
+    send("READY", "guest");
+    send(round === 1 ? "START" : "NEXT");
+    assert.equal(state.roundNumber, round);
+    now = state.round.startsAt;
+    send("VOTE", hostId, { choice: "A" });
+    send("VOTE", "guest", { choice: "A" });
+    assert.equal(state.phase, "RESULTS");
+    now = state.round.deadlineAt;
+    const view = projectState(state, "guest");
+    assert.equal(readiness({ state: view, members, hostId, userId: "guest" }).finished, false);
+    assert.ok(view.config.totalRounds > round); // Older clients still show Ready.
+  }
+
+  assert.throws(() => send("CONFIG", hostId, { ...state.config, gameType: "MIXED" }), /ไม่พบเกมนี้/);
+  send("CONFIG", hostId, { ...state.config, gameType: "HORSE_RACE" });
+  assert.equal(state.config.openEnded, true);
+  assert.throws(() => send("CUSTOM_QUESTION", hostId, { question: "Test?", optionA: "A", optionB: "B" }), /โหวตข้างน้อย/);
+  send("END");
+  assert.equal(state.phase, "FINISHED");
+  assert.equal(state.completedRounds, 20);
+  assert.equal(state.history.length, 18);
+  assert.deepEqual(state.playedGames, ["MINORITY_VOTE"]);
+  send("RESET");
+  assert.equal(state.config.openEnded, true);
+  assert.equal(state.completedRounds, 0);
+});
 
 test("readiness shown in the UI agrees with server admission for 1,536 seating and game combinations", () => {
   const values = ["waiting", "ready", "resting", "offline"];

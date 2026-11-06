@@ -18,7 +18,8 @@ export function readiness({ state, members, hostId, userId }) {
   const missing = Math.max(0, minimum - playing.length);
   const me = seats.find((p) => p.id === userId);
   const finished =
-    state.phase === "RESULTS" && state.roundNumber >= state.config.totalRounds;
+    state.phase === "RESULTS" && !state.config.openEnded &&
+    state.roundNumber >= state.config.totalRounds;
   const host = seats.find((p) => p.id === hostId);
   let message;
   if (finished) message = "ครบทุกตาแล้ว เจ้าของวงเปิดสรุปวงนี้ได้เลย";

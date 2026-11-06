@@ -339,9 +339,6 @@
   font-size: 14px;
   line-height: 1.9;
 }
-.game-picker:has(.game-pick:nth-child(5)) {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
 @media (max-width: 600px) {
   .forbidden-friends {
     grid-template-columns: 1fr;
@@ -383,12 +380,6 @@
   }
   .forbidden-word-list strong {
     font-size: 34px;
-  }
-  .game-picker:has(.game-pick:nth-child(5)) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .game-picker .game-pick:first-child {
-    grid-column: 1/-1;
   }
   .forbidden-session-strip {
     font-size: 12px;

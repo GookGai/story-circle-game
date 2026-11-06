@@ -51,10 +51,12 @@ router.get("/:code/preview", async (req, res) => {
 
 router.post("/", authenticate, async (req, res) => {
   const gameType = req.body.gameType || "MIXED";
+  const openEnded = req.body.settings?.openEnded === true;
   const totalRounds = req.body.settings?.totalRounds || 6;
   if (
     !GAMES.some((g) => g.type === gameType) ||
-    ![3, 6, 9].includes(totalRounds)
+    ![3, 6, 9].includes(totalRounds) ||
+    (openEnded && gameType === "MIXED")
   )
     return res.status(400).json({ error: "การตั้งค่าวงไม่ถูกต้อง" });
   if (
@@ -82,6 +84,7 @@ router.post("/", authenticate, async (req, res) => {
       const runtime = initialState();
       runtime.config.gameType = gameType;
       runtime.config.totalRounds = totalRounds;
+      if (openEnded) runtime.config.openEnded = true;
       runtime.profiles[user.id] = { ...user, username: displayName(user) };
       runtime.ready = [user.id];
       const code = randomBytes(5).toString("hex").slice(0, 6).toUpperCase();

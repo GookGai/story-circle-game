@@ -8,40 +8,49 @@ import { isNativeApp } from "../utils/platform";
 import { ANDROID_RELEASE } from "../utils/androidRelease";
 import { fetchAndroidRelease } from "../utils/appUpdate.mjs";
 import WebAppInstall from "../components/WebAppInstall";
+import GamePicker from "../components/GamePicker";
 
 const games = [
   {
+    type: "MINORITY_VOTE",
     icon: "vote",
     n: "01",
     title: "เลือกข้าง แล้วมาเถียงกัน",
     name: "โหวตข้างน้อย",
+    subtitle: "ตอบคำถามแล้วลุ้นว่าเพื่อนเลือกอะไร",
     copy: "คำถามกวน ๆ ที่ทำให้รู้จักเพื่อนอีกมุม · 2 คนเล่นใจตรงกัน",
     tag: "2–10 คน",
     color: "sage",
   },
   {
+    type: "HORSE_RACE",
     icon: "horse",
     n: "02",
     title: "ตัวโปรดใคร จะเข้าเส้นชัย",
     name: "แข่งม้า",
+    subtitle: "เชียร์ม้าตัวโปรดให้ติด 3 อันดับแรก",
     copy: "เลือกม้า เชียร์ให้สุด แล้วลุ้นให้ติดท็อป 3 ไปพร้อมกัน",
     tag: "2–10 คน",
     color: "peach",
   },
   {
+    type: "PANIC_JUMP",
     icon: "jump",
     n: "03",
     title: "ใจเย็นได้ แต่อย่าช้าไป",
     name: "ร่มชูชีพวัดใจ",
+    subtitle: "กดกางร่มให้ตรงเลขเป้า",
     copy: "กางร่มให้ตรงเลขเป้า คนกดห่างสุดรับบทลงโทษ",
-    tag: "3–10 คน",
+    tag: "2–10 คน",
     color: "lavender",
   },
   {
+    type: "FORBIDDEN_WORD",
     icon: "secret",
     n: "04",
     title: "ใครเผลอพูด คนนั้นโดน",
     name: "คำต้องห้ามประจำตัว",
+    subtitle: "จับเพื่อนที่เผลอพูดคำต้องห้าม",
     copy: "เห็นคำเพื่อน ซ่อนคำตัวเอง · Custom หมวด จับแล้วรับคำใหม่เล่นต่อ",
     tag: "2–10 คน",
     color: "sage",
@@ -67,6 +76,7 @@ export default function PartyHome() {
         : null,
   );
   const [code, setCode] = useState(inviteCode?.toUpperCase() || "");
+  const [gameType, setGameType] = useState("");
   const [nickname, setNickname] = useState("");
   const [avatar, setAvatar] = useState("cat");
   const [busy, setBusy] = useState(false);
@@ -99,9 +109,9 @@ export default function PartyHome() {
       if (event.key !== "Tab") return;
       const elements = [
         ...dialog.current.querySelectorAll(
-          "button:not(:disabled),input,a[href]",
+          "button:not(:disabled),input:not(:disabled),a[href],summary",
         ),
-      ];
+      ].filter((element) => !element.closest("details:not([open])") || element.matches("summary"));
       const first = elements[0],
         last = elements[elements.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -149,6 +159,7 @@ export default function PartyHome() {
 
   async function submit(event) {
     event.preventDefault();
+    if (busy || authLoading || (mode === "create" && !gameType)) return;
     setBusy(true);
     setError("");
     try {
@@ -162,9 +173,8 @@ export default function PartyHome() {
       if (!user) await joinAsGuest(nickname.trim(), avatar);
       if (mode === "create") {
         const data = await api.post("/api/rooms", {
-          gameType: "MIXED",
-          maxPlayers: 10,
-          settings: { totalRounds: 6 },
+          gameType,
+          settings: { openEnded: true },
         });
         navigate(`/room/${data.room.code}`);
       } else {
@@ -172,7 +182,7 @@ export default function PartyHome() {
         navigate(`/room/${code}`, { replace: true });
       }
     } catch (err) {
-      setError(err.message || "เข้าวงไม่สำเร็จ ลองอีกครั้ง");
+      setError(err.message || (mode === "create" ? "สร้างวงไม่สำเร็จ ลองอีกครั้ง" : "เข้าวงไม่สำเร็จ ลองอีกครั้ง"));
     } finally {
       setBusy(false);
     }
@@ -185,6 +195,29 @@ export default function PartyHome() {
     setMode(null);
     if (inviteCode) navigate("/", { replace: true });
   }
+  const creating = mode === "create";
+  const submitLabel = creating
+    ? busy ? "กำลังสร้างวง…" : "สร้างวง"
+    : busy ? "กำลังเข้าวง…" : "เข้าวงเลย";
+  const avatarChoices = (
+    <fieldset className="avatar-field" disabled={busy}>
+      <legend>เลือกตัวแทนคุณ</legend>
+      <div>
+        {AVATARS.slice(0, 8).map((item) => (
+          <button
+            type="button"
+            key={item.id}
+            aria-label={item.name}
+            aria-pressed={avatar === item.id}
+            className={`avatar-pick ${avatar === item.id ? "selected" : ""}`}
+            onClick={() => setAvatar(item.id)}
+          >
+            {item.emoji}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
 
   return (
     <div className="party-home">
@@ -330,9 +363,9 @@ export default function PartyHome() {
           <span className="eyebrow">จาก “เล่นอะไรดี” ถึง “เอาอีกตา”</span>
           <div className="how-steps">
             {[
-              ["01", "ตั้งชื่อ เปิดวง", "ไม่ต้องจำรหัสผ่าน"],
+              ["01", "เลือกเกม เปิดวง", "ใช้ชื่อเล่นได้เลย"],
               ["02", "ส่ง QR ให้เพื่อน", "คนละมือถือ โต๊ะเดียวกัน"],
-              ["03", "เลือกเกม แล้วลุย", "จะเล่นจริงจังหรือขำ ๆ ก็ได้"],
+              ["03", "กดพร้อม แล้วลุย", "เล่นต่อได้ตามจังหวะของวง"],
             ].map(([n, title, copy]) => (
               <div key={n}>
                 <span>{n}</span>
@@ -363,13 +396,13 @@ export default function PartyHome() {
 
       {mode && (
         <div
-          className="party-modal-backdrop"
+          className={`party-modal-backdrop${mode === "create" ? " create-backdrop" : ""}`}
           onClick={(event) => {
             if (event.target === event.currentTarget && !busy) close();
           }}
         >
           <section
-            className="party-modal"
+            className={`party-modal${mode === "create" ? " create-room-modal" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="entry-title"
@@ -383,16 +416,19 @@ export default function PartyHome() {
             >
               <Icon name="close" />
             </button>
-            <span className="eyebrow">YOUR CIRCLE STARTS HERE</span>
+            {mode === "join" && <span className="eyebrow">YOUR CIRCLE STARTS HERE</span>}
             <h2 id="entry-title">
-              {mode === "create" ? "เริ่มวงของคุณ" : "เพื่อนรออยู่แล้ว"}
+              {mode === "create" ? "สร้างวงใหม่" : "เพื่อนรออยู่แล้ว"}
             </h2>
             <p className="dim">
               {mode === "create"
-                ? "ตั้งชื่อเล่น แล้วส่ง QR ให้เพื่อนเข้ามา"
+                ? "เลือกเกมแรกของวง · เล่นได้ 2–10 คน"
                 : "ใส่รหัส 6 ตัว แล้วเข้าวงได้เลย"}
             </p>
             <form onSubmit={submit} className="entry-form">
+              {mode === "create" && (
+                <GamePicker games={games} value={gameType} onChange={setGameType} disabled={busy} label="เลือกเกมแรกของวง" />
+              )}
               {mode === "join" && (
                 <label>
                   รหัสวง
@@ -436,34 +472,24 @@ export default function PartyHome() {
               ) : (
                 <>
                   <label>
-                    ให้เพื่อนเรียกคุณว่าอะไร
+                    {mode === "create" ? "ชื่อเล่นของคุณ" : "ให้เพื่อนเรียกคุณว่าอะไร"}
                     <input
                       className="p-input"
                       value={nickname}
                       onChange={(event) => setNickname(event.target.value)}
                       maxLength={15}
                       required
+                      disabled={busy}
                       placeholder="ชื่อเล่นของคุณ"
                       autoComplete="nickname"
                     />
                   </label>
-                  <fieldset className="avatar-field">
-                    <legend>เลือกตัวแทนคุณ</legend>
-                    <div>
-                      {AVATARS.slice(0, 8).map((item) => (
-                        <button
-                          type="button"
-                          key={item.id}
-                          aria-label={item.name}
-                          aria-pressed={avatar === item.id}
-                          className={`avatar-pick ${avatar === item.id ? "selected" : ""}`}
-                          onClick={() => setAvatar(item.id)}
-                        >
-                          {item.emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </fieldset>
+                  {creating ? (
+                    <details className="create-avatar-options">
+                      <summary><span aria-hidden="true">{getAvatarEmoji(avatar)}</span> เปลี่ยนรูปตัวแทน</summary>
+                      {avatarChoices}
+                    </details>
+                  ) : avatarChoices}
                 </>
               )}
               {error && (
@@ -471,22 +497,15 @@ export default function PartyHome() {
                   {error}
                 </p>
               )}
-              <button
-                className="p-button primary full"
-                disabled={
-                  busy || authLoading || (mode === "join" && code.length !== 6)
-                }
-              >
-                {busy
-                  ? "กำลังเข้าวง…"
-                  : mode === "create"
-                    ? "เปิดวงเลย"
-                    : "เข้าวงเลย"}
-                <Icon name="arrow" size={20} />
-              </button>
-              <span className="entry-footnote">
-                ใช้ชื่อเล่นได้เลย ไม่ต้องสมัครสมาชิก
-              </span>
+              <div className={creating ? "create-room-action" : undefined}>
+                <button
+                  className="p-button primary full"
+                  disabled={busy || authLoading || (creating ? !gameType : code.length !== 6)}
+                >
+                  {submitLabel} <Icon name="arrow" size={20} />
+                </button>
+              </div>
+              {mode === "join" && <span className="entry-footnote">ใช้ชื่อเล่นได้เลย ไม่ต้องสมัครสมาชิก</span>}
             </form>
           </section>
         </div>

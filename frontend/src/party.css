@@ -872,90 +872,6 @@ h3 {
   flex-direction: column;
   gap: 32px;
 }
-.lobby-welcome {
-  display: flex;
-  align-items: center;
-  gap: 23px;
-  padding: 28px 28px 29px;
-  background: #c1c8a1;
-  color: #30372a;
-  border-radius: 8px;
-}
-.circle-graphic {
-  width: 94px;
-  height: 94px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #343c2940;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.lobby-welcome .eyebrow {
-  font-size: 7px;
-  color: #414b38;
-}
-.lobby-welcome h2 {
-  font-size: 22px;
-  margin: 9px 0 9px;
-}
-.lobby-welcome p {
-  font-size: 11px;
-  color: #4d5842;
-  line-height: 1.9;
-}
-.room-settings {
-  padding-top: 31px;
-}
-.room-settings > .eyebrow {
-  font-size: 10px;
-  color: var(--text-secondary);
-  font-family: var(--font-thai);
-}
-.game-picker {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
-  margin-top: 15px;
-}
-.game-pick {
-  min-height: 124px;
-  text-align: left;
-  padding: 17px 12px;
-  border: 1px solid #ffffff1b;
-  border-radius: 7px;
-  background: transparent;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition:
-    background 0.2s,
-    border-color 0.2s;
-}
-.game-pick > svg {
-  color: #b6bba9;
-}
-.game-pick strong {
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.game-pick span {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.game-pick.selected {
-  border-color: var(--accent);
-  background: #ffb66e0c;
-}
-.game-pick.selected > svg {
-  color: var(--accent);
-}
-.game-pick.selected > svg:last-child {
-  position: absolute;
-  top: 12px;
-  right: 9px;
-}
 .settings-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1179,27 +1095,6 @@ h3 {
 }
 .room-footer .connection-ok {
   color: #b8c999;
-}
-.chosen-game {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  padding: 30px 0;
-}
-.chosen-game > svg {
-  color: var(--accent);
-}
-.chosen-game span {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-.chosen-game h3 {
-  font-size: 26px;
-}
-.chosen-game p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 6px;
 }
 .party-loading {
   min-height: 100svh;
@@ -1959,26 +1854,6 @@ h3 {
     grid-template-columns: minmax(0, 1fr) 220px;
     gap: 28px;
   }
-  .game-picker {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .game-pick {
-    min-height: 100px;
-  }
-  .lobby-welcome {
-    padding: 22px 18px;
-    gap: 16px;
-  }
-  .circle-graphic {
-    width: 65px;
-    height: 65px;
-  }
-  .circle-graphic > svg {
-    width: 37px;
-  }
-  .lobby-welcome h2 {
-    font-size: 19px;
-  }
   .horse-choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2302,49 +2177,6 @@ h3 {
     display: grid;
     grid-template-columns: 1fr;
     gap: 30px;
-  }
-  .lobby-welcome {
-    padding: 23px 18px;
-    gap: 15px;
-  }
-  .lobby-welcome .circle-graphic {
-    width: 55px;
-    height: 55px;
-  }
-  .lobby-welcome .circle-graphic svg {
-    width: 30px;
-  }
-  .lobby-welcome .eyebrow {
-    font-size: 6px;
-    letter-spacing: 0.1em;
-  }
-  .lobby-welcome h2 {
-    font-size: 18px;
-    line-height: 1.5;
-    margin: 7px 0;
-  }
-  .lobby-welcome p {
-    font-size: 10px;
-  }
-  .game-picker {
-    gap: 10px;
-  }
-  .game-pick {
-    min-height: 115px;
-    padding: 17px 16px;
-  }
-  .game-pick strong {
-    font-size: 13px;
-  }
-  .game-pick span {
-    font-size: 10px;
-  }
-  .game-pick.selected > svg:last-child {
-    top: 15px;
-    right: 13px;
-  }
-  .room-settings {
-    padding-top: 25px;
   }
   .settings-row {
     gap: 11px;

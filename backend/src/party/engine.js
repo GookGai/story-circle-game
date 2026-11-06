@@ -83,6 +83,8 @@ export function initialState() {
     scores: {},
     profiles: {},
     history: [],
+    completedRounds: 0,
+    playedGames: [],
     round: null,
     roundNumber: 0,
     commands: [],
@@ -102,6 +104,24 @@ function points(state, id, game, amount, wins = 0) {
   row.played += 1;
 }
 
+function recordRound(state, skipped = false) {
+  const round = state.round;
+  state.completedRounds ??= state.history.filter((entry) => !entry.skipped).length;
+  if (!skipped) state.completedRounds++;
+  state.playedGames ??= [...new Set(state.history.map((entry) => entry.gameType))];
+  if (!state.playedGames.includes(round.gameType)) state.playedGames.push(round.gameType);
+  state.history.push({
+    id: round.id,
+    number: state.roundNumber,
+    gameType: round.gameType,
+    mode: round.mode,
+    title: round.result.title,
+    skipped,
+    players: round.result.players,
+  });
+  state.history = state.history.slice(-18);
+}
+
 export function finish(state, now, skipped = false) {
   normalizePenaltyState(state);
   const round = state.round;
@@ -117,15 +137,7 @@ export function finish(state, now, skipped = false) {
         (state.scores[p.userId].penalties || 0) + p.hits;
     }
     round.finishedAt = now;
-    state.history.push({
-      id: round.id,
-      number: state.roundNumber,
-      gameType: round.gameType,
-      title: round.result.title,
-      players: round.result.players,
-      skipped: false,
-    });
-    state.history = state.history.slice(-18);
+    recordRound(state);
     state.phase = "FINISHED";
     state.ready = [];
     return;
@@ -275,16 +287,7 @@ export function finish(state, now, skipped = false) {
   round.finishedAt = now;
   delete round.frames;
   state.phase = "RESULTS";
-  state.history.push({
-    id: round.id,
-    number: state.roundNumber,
-    gameType: round.gameType,
-    mode: round.mode,
-    title: round.result.title,
-    skipped,
-    players: round.result.players,
-  });
-  state.history = state.history.slice(-18);
+  recordRound(state, skipped);
   state.ready = [];
 }
 
@@ -461,6 +464,8 @@ export function applyCommand(original, command, ctx) {
     case "CUSTOM_QUESTION":
       if (!["LOBBY", "RESULTS"].includes(state.phase))
         fail("เขียนคำถามได้ระหว่างรอบ");
+      if (state.config.openEnded && state.config.gameType !== "MINORITY_VOTE")
+        fail("คำถามที่เขียนเองใช้ได้ในเกมโหวตข้างน้อย");
       if (
         ![command.question, command.optionA, command.optionB].every(
           (v) => typeof v === "string" && v.trim(),
@@ -482,14 +487,17 @@ export function applyCommand(original, command, ctx) {
     case "CONFIG": {
       if (!["LOBBY", "RESULTS"].includes(state.phase))
         fail("เปลี่ยนการตั้งค่าได้ระหว่างรอบ");
-      if (!GAMES.some((g) => g.type === command.gameType)) fail("ไม่พบเกมนี้");
-      if (![3, 6, 9].includes(command.totalRounds))
+      const { openEnded } = state.config;
+      if (!GAMES.some((g) => g.type === command.gameType) || (openEnded && command.gameType === "MIXED"))
+        fail("ไม่พบเกมนี้");
+      if (!openEnded && ![3, 6, 9].includes(command.totalRounds))
         fail("เลือกรอบ 3, 6 หรือ 9");
       if (!["all", "warmup", "friends", "chaos"].includes(command.category))
         fail("หมวดคำถามไม่ถูกต้อง");
       state.config = {
+        ...state.config,
         gameType: command.gameType,
-        totalRounds: command.totalRounds,
+        totalRounds: openEnded ? state.config.totalRounds : command.totalRounds,
         category: command.category,
       };
       if (command.gameType === "FORBIDDEN_WORD") ensureForbiddenConfig(state);
@@ -509,7 +517,7 @@ export function applyCommand(original, command, ctx) {
       break;
     case "NEXT":
       if (state.phase !== "RESULTS") fail("รอเฉลยรอบนี้ก่อน");
-      if (state.roundNumber >= state.config.totalRounds) {
+      if (!state.config.openEnded && state.roundNumber >= state.config.totalRounds) {
         state.phase = "FINISHED";
         break;
       }
@@ -622,6 +630,9 @@ export function applyCommand(original, command, ctx) {
 export function projectState(state, userId) {
   const result = structuredClone(state || initialState());
   normalizePenaltyState(result);
+  // Older app builds use this number to hide their ready controls at the end.
+  if (result.config.openEnded)
+    result.config.totalRounds = Math.max(result.config.totalRounds, result.roundNumber + 1);
   if (result.config.gameType === "FORBIDDEN_WORD")
     ensureForbiddenConfig(result);
   delete result.commands;

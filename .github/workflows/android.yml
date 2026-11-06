@@ -1,0 +1,104 @@
+name: Android installable build
+on:
+  workflow_dispatch:
+    inputs:
+      release_ui_check:
+        description: Also run the optional release UI check on the emulator
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci --prefix frontend
+      - run: npm run lint --prefix frontend
+      - run: npm test --prefix frontend
+      - run: npm run android:sync --prefix frontend
+      - name: Build Android packages and check native sources
+        working-directory: frontend/android
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease :app:lintRelease
+      - name: Prepare local-signing artifacts
+        run: |
+          mkdir -p artifacts/tooling
+          cp frontend/android/app/build/outputs/apk/release/app-release-unsigned.apk artifacts/story-circle-unsigned.apk
+          cp frontend/android/app/build/outputs/bundle/release/app-release.aab artifacts/story-circle-unsigned.aab
+          cp frontend/android/app/build/outputs/mapping/release/mapping.txt artifacts/mapping.txt
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" artifacts/tooling/
+          cp "$ANDROID_HOME/build-tools/36.0.0/NOTICE.txt" artifacts/tooling/NOTICE.txt
+          echo '${{ github.sha }}' > artifacts/commit.txt
+          cd artifacts && sha256sum *.apk *.aab tooling/apksigner.jar > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: story-circle-android-${{ github.run_number }}
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
+  native-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANDROID_RELEASE_UI_CHECK: ${{ inputs.release_ui_check }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci --prefix frontend
+      - run: npm run android:sync --prefix frontend
+      - name: Enable hardware acceleration on the disposable runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Prepare release app and functional test APK before booting emulator
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ANDROID_NATIVE_TEST=true ./gradlew --no-daemon :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash frontend/scripts/run-native-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: story-circle-native-smoke-${{ github.run_number }}
+          path: |
+            artifacts/screenshots/
+            artifacts/android-gameplay.json
+            frontend/android/app/build/reports/androidTests/
+            frontend/android/app/build/outputs/androidTest-results/
+          retention-days: 14

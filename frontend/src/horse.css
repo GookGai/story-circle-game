@@ -1,0 +1,693 @@
+.horse-game {
+  text-align: left;
+  width: 100%;
+  color: #292d24;
+  background: #f5f1e8;
+  padding: 24px;
+  border-radius: 16px;
+}
+.horse-game h2,
+.horse-game h3,
+.horse-game h4 {
+  color: inherit;
+}
+.horse-game > .eyebrow {
+  color: #88613e;
+}
+.horse-rules {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 16px 20px;
+  background: #e4ead7;
+  color: #2a422b;
+  border-radius: 12px;
+  margin-bottom: 28px;
+}
+.horse-rules strong {
+  font-size: 20px;
+}
+.horse-rules span {
+  font-size: 14px;
+}
+.horse-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 28px 0 14px;
+}
+.horse-section-heading h3 {
+  font-size: 21px;
+  margin: 0;
+}
+.horse-section-heading > span {
+  font-size: 13px;
+  color: #75776d;
+}
+.guru-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid #d9dacd;
+}
+.guru-tip {
+  padding: 20px 18px;
+  min-width: 0;
+}
+.guru-tip + .guru-tip {
+  border-left: 1px solid #d9dacd;
+}
+.guru-person {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.guru-person > span {
+  font-size: 32px;
+}
+.guru-person h4 {
+  font-size: 18px;
+  margin: 0;
+}
+.guru-person small,
+.guru-tip > small {
+  color: #717569;
+  font-size: 12px;
+}
+.guru-tip p {
+  font-size: 14px;
+  margin: 12px 0;
+}
+.guru-pick {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 5px;
+}
+.guru-follow {
+  width: 100%;
+  text-align: left;
+  padding: 13px 0;
+  border: 0;
+  border-top: 1px solid #d9dacd;
+  margin-top: 14px;
+  color: #8c3e23;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+}
+.guru-follow:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.horse-footnote {
+  font-size: 13px;
+  color: #72766c;
+  line-height: 1.7;
+  margin: 12px 0 24px;
+}
+.horse-field {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.horse-profile {
+  border: 1px solid #d7dacd;
+  border-top: 4px solid var(--horse-color);
+  border-radius: 12px;
+  background: #faf8ef;
+  min-width: 0;
+  overflow: hidden;
+}
+.horse-profile.chosen {
+  border-color: #a74a2e;
+  box-shadow: 0 0 0 2px #a74a2e;
+  background: #fff2e7;
+}
+.horse-pick-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #292d24;
+  padding: 16px 12px 0;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.horse-pick-button:disabled {
+  cursor: default;
+}
+.horse-pick-button:focus-visible,
+.guru-follow:focus-visible {
+  outline: 3px solid #a74a2e;
+  outline-offset: -4px;
+}
+.horse-number {
+  position: absolute;
+  top: 11px;
+  left: 12px;
+  color: #72766c;
+  font: 700 17px monospace;
+}
+.horse-symbol {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  font-size: 20px;
+}
+.horse-portrait {
+  width: 100px;
+  height: 84px;
+  flex-shrink: 0;
+}
+.horse-profile .horse-portrait {
+  margin: 12px 0 8px;
+}
+.horse-pick-button h4 {
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+.horse-tagline {
+  font-size: 12px;
+  color: #74766c;
+  min-height: 36px;
+}
+.horse-select-label {
+  padding: 12px 0;
+  border-top: 1px solid #dedfd3;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 700;
+  color: #8c3e23;
+}
+.horse-guru-ratings { padding: 10px; border-top: 1px solid #dedfd3; }
+.horse-guru-ratings > div { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 3px 0; }
+.horse-guru-ratings > div > span { font-size: 10px; color: #61664f; white-space: nowrap; }
+.horse-guru-ratings b { font: 600 13px/1.4 sans-serif; white-space: nowrap; color: #96701a; letter-spacing: .3px; }
+.horse-guru-ratings i { font-style: normal; color: #a1a591; }
+.horse-supporters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 8px 10px 12px;
+}
+.horse-supporters > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #eaece2;
+  color: #4f5746;
+}
+.horse-supporters > .is-me {
+  background: #f5d7c1;
+  color: #873d24;
+  font-weight: 700;
+}
+.horse-supporters > .no-supporters {
+  background: transparent;
+  color: #85887f;
+}
+.horse-selection-summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 24px 0;
+  padding: 18px 20px;
+  background: #edeadf;
+  border-radius: 10px;
+}
+.horse-selection-summary > span {
+  font-size: 32px;
+}
+.horse-selection-summary strong,
+.horse-selection-summary small,
+.horse-selection-summary div > span {
+  display: block;
+}
+.horse-selection-summary small,
+.horse-selection-summary div > span {
+  color: #74766c;
+  font-size: 12px;
+}
+.horse-selection-summary strong {
+  font-size: 17px;
+}
+.race-leaders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-bottom: 20px;
+  font-size: 14px;
+}
+.race-leaders > span {
+  color: #72766c;
+}
+.horse-lane {
+  border-top: 1px solid #d9dacd;
+  padding: 12px;
+  border-left: 4px solid var(--horse-color);
+}
+.horse-lane.my-horse-lane {
+  background: #fff1e4;
+  outline: 2px solid #ac5532;
+  border-radius: 8px;
+}
+.horse-lane-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+.horse-lane-heading > b {
+  color: #73776b;
+  font-family: monospace;
+}
+.horse-lane-heading em {
+  font-size: 11px;
+  font-style: normal;
+  padding: 3px 6px;
+  background: #a94c2b;
+  color: #fff8ed;
+  border-radius: 4px;
+}
+.horse-event {
+  margin-left: auto;
+  font-size: 13px;
+}
+.horse-runway {
+  position: relative;
+  height: 55px;
+  margin: 0 2px;
+  border-bottom: 1px dashed #b8bcae;
+}
+.horse-runner {
+  position: absolute;
+  bottom: -1px;
+  width: 64px;
+  height: 54px;
+  transition: left 0.15s linear;
+  z-index: 1;
+}
+.horse-runner .horse-portrait {
+  width: 64px;
+  height: 54px;
+}
+.horse-finish-line {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  height: 46px;
+  background: repeating-conic-gradient(#75786a 0% 25%, transparent 0% 50%) 0
+    0/7px 7px;
+  opacity: 0.5;
+}
+.horse-lane .horse-supporters {
+  padding: 8px 0 0;
+}
+.horse-results > h2 {
+  font-size: clamp(25px, 4vw, 38px);
+  margin: 12px 0 4px;
+}
+.horse-personal-result {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  border-radius: 12px;
+  padding: 22px;
+  margin: 22px 0;
+}
+.horse-personal-result.penalty {
+  background: #f4d9c8;
+  color: #8b391f;
+}
+.horse-personal-result.safe {
+  background: #e1e8d5;
+  color: #355331;
+}
+.horse-personal-result.missed {
+  background: #e7e6df;
+}
+.horse-personal-result > span {
+  font-size: 22px;
+  font-weight: 800;
+}
+.horse-personal-result small {
+  display: block;
+  opacity: 0.8;
+}
+.horse-personal-result strong {
+  font-size: 24px;
+  display: block;
+}
+.horse-personal-result p {
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+.horse-outcome-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.horse-outcome h3 {
+  font-size: 19px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 2px solid #c9cdbb;
+  padding-bottom: 12px;
+}
+.horse-outcome.penalty h3 {
+  color: #a34b2d;
+  border-color: #cc9072;
+}
+.horse-outcome.safe h3 {
+  color: #4a633d;
+}
+.horse-outcome h3 > span {
+  font-size: 13px;
+  font-weight: 400;
+}
+.horse-outcome > p {
+  font-size: 14px;
+  color: #74766c;
+}
+.horse-result-person {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  align-items: center;
+  border-bottom: 1px solid #dedfd4;
+}
+.horse-result-person > span {
+  font-size: 26px;
+}
+.horse-result-person > div {
+  flex: 1;
+  min-width: 0;
+}
+.horse-result-person strong {
+  display: block;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.horse-result-person small {
+  display: block;
+  color: #73776b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.horse-result-person > b {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.horse-outcome.penalty .horse-result-person > b {
+  color: #a34b2d;
+}
+.horse-standing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #d9dacd;
+  padding: 10px 0;
+}
+.horse-place {
+  font: 700 24px monospace;
+  width: 28px;
+  text-align: center;
+  color: #8a8e81;
+}
+.top-three .horse-place {
+  color: #92703c;
+}
+.horse-standing .horse-portrait {
+  width: 62px;
+  height: 53px;
+}
+.horse-standing-detail {
+  flex: 1;
+  min-width: 0;
+}
+.horse-standing-detail > strong {
+  font-size: 16px;
+}
+.horse-standing .horse-supporters {
+  padding: 5px 0 0;
+}
+.horse-rank-outcome {
+  font-size: 12px;
+  color: #9a5238;
+  white-space: nowrap;
+}
+.top-three .horse-rank-outcome {
+  color: #557145;
+}
+.guru-hit,
+.guru-miss {
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.guru-hit {
+  color: #557145;
+}
+.guru-miss {
+  color: #9a5238;
+}
+@media (max-width: 1000px) {
+  .horse-field {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .guru-tip {
+    padding: 16px 10px;
+  }
+  .guru-person {
+    gap: 6px;
+  }
+  .guru-person h4 {
+    font-size: 16px;
+  }
+}
+@media (max-width: 600px) {
+  .horse-game {
+    padding: 16px 12px;
+    border-radius: 12px;
+  }
+  .horse-rules {
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  .horse-rules span {
+    font-size: 12px;
+  }
+  .horse-rules strong {
+    font-size: 18px;
+  }
+  .guru-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .guru-tip {
+    flex: 0 0 86%;
+    padding: 16px 12px;
+    scroll-snap-align: start;
+  }
+  .guru-tip + .guru-tip {
+    border-left: 1px solid #d9dacd;
+  }
+  .guru-person > span {
+    font-size: 30px;
+  }
+  .guru-person h4 {
+    font-size: 18px;
+  }
+  .guru-pick {
+    margin: 10px 0 4px;
+  }
+  .guru-follow {
+    margin-top: 10px;
+    padding-bottom: 0;
+  }
+  .horse-field {
+    gap: 10px;
+  }
+  .horse-pick-button {
+    padding-inline: 8px;
+  }
+  .horse-pick-button h4 {
+    font-size: 16px;
+  }
+  .horse-tagline {
+    font-size: 12px;
+  }
+  .horse-section-heading h3 {
+    font-size: 19px;
+  }
+  .horse-outcome-groups {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .horse-personal-result {
+    padding: 18px 14px;
+    gap: 12px;
+  }
+  .horse-personal-result strong {
+    font-size: 21px;
+  }
+  .horse-personal-result > span {
+    font-size: 18px;
+  }
+  .horse-standing {
+    gap: 6px;
+  }
+  .horse-standing .horse-portrait {
+    width: 48px;
+    height: 42px;
+  }
+  .horse-standing-detail > strong {
+    font-size: 14px;
+  }
+  .horse-place {
+    font-size: 20px;
+    width: 22px;
+  }
+  .horse-lane {
+    padding: 10px 8px;
+  }
+  .horse-lane-heading {
+    font-size: 14px;
+    gap: 7px;
+  }
+  .race-leaders {
+    font-size: 12px;
+    gap: 6px 12px;
+  }
+  .horse-supporters > span {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .horse-runner {
+    transition: none;
+  }
+}
+
+/* Live race: one course, eight fixed lanes. Expanded profiles stay outside play. */
+.race-screen {
+  --race-runner-width: 40px;
+  height: min(780px, 85dvh);
+  min-height: 560px;
+  padding: 16px;
+}
+.race-canvas {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.race-topbar { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.race-topbar > div { flex: 1; min-width: 0; }
+.race-topbar strong { display: block; font-size: 18px; }
+.race-topbar small { display: block; font-size: 10px; color: #6a6d62; }
+.race-topbar .icon-button { color: #52594b; border-color: #292d2429; flex-shrink: 0; }
+.race-clock { font: 700 26px/1 Inter, sans-serif; text-align: center; min-width: 40px; font-variant-numeric: tabular-nums; }
+.race-clock small { font: 400 10px/1.6 var(--font-thai); }
+.race-skip { min-width: 44px; min-height: 44px; background: transparent; border: 1px solid #292d2429; border-radius: 8px; color: #52594b; font-size: 12px; }
+.race-screen .race-leaders { flex-wrap: nowrap; gap: 8px; padding: 5px 0; min-width: 0; font-size: 11px; overflow: hidden; }
+.race-screen .race-leaders > span { flex-shrink: 0; }
+.race-screen .race-leaders > strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid var(--horse-color); padding-left: 5px; }
+.race-board { min-height: 0; display: grid; grid-template-rows: repeat(8, minmax(0, 1fr)); border-bottom: 1px solid #d9dacd; }
+.race-screen .horse-lane { min-height: 0; display: grid; grid-template-columns: 116px minmax(0, 1fr) 25px; gap: 8px; align-items: center; padding: 4px 6px; }
+.race-screen .horse-lane.my-horse-lane { outline: none; box-shadow: inset 0 0 0 2px #ac5532; border-radius: 5px; }
+.race-screen .horse-lane-heading { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 1px; }
+.race-screen .horse-lane-heading > strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.race-screen .horse-lane-heading b { font: 700 12px Inter, sans-serif; }
+.race-cheerers { display: flex; gap: 2px; align-items: center; height: 18px; white-space: nowrap; overflow: hidden; font-size: 13px; line-height: 1; }
+.race-cheerers small { font-size: 9px; color: #74796a; }
+.race-screen .race-cheerers em { font-size: 9px; padding: 2px 4px; border-radius: 3px; }
+.race-screen .horse-runway { min-height: 0; height: 100%; max-height: 56px; margin: 0; }
+.race-screen .horse-runner { width: var(--race-runner-width); height: calc(var(--race-runner-width) * .84); max-height: calc(100% - 4px); bottom: 2px; }
+.race-screen .horse-runner .horse-portrait { width: 100%; height: 100%; }
+.race-distance-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--horse-color); opacity: .8; transition: width .15s linear; }
+.race-screen .horse-lane.is-leading:not(.my-horse-lane) { background: #e6eddc; }
+.my-horse-lane .race-distance-bar { height: 3px; }
+.race-screen .horse-finish-line { height: 100%; width: 6px; }
+.race-saddle-number { position: absolute; left: 10%; bottom: 0; color: #fffdf5; background: #283325; border-radius: 3px; min-width: 12px; text-align: center; font: 700 8px/12px Inter, sans-serif; }
+.my-horse-lane .race-saddle-number { background: #a94c2b; }
+.race-event { position: absolute; right: 0; top: 0; font: 700 14px/1 Inter, sans-serif; }
+.race-event.burst { color: #326832; }
+.race-event.stumble { color: #a94c2b; }
+.race-rank { text-align: center; color: #777c70; font: 600 15px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.race-rank.top-three { color: #315c31; font-weight: 800; }
+.race-watch-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.race-watch-footer > div { min-width: 0; }
+.race-watch-footer small { display: block; font-size: 10px; color: #74796a; }
+.race-watch-footer strong { display: block; font-size: 13px; }
+.race-watch-footer strong > span { color: #a94c2b; white-space: nowrap; }
+.race-picks-toggle { min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: 12px; flex-shrink: 0; border: 1px solid #292d2430; background: #fffdf5; color: #434d3a; border-radius: 8px; padding: 8px 12px; }
+.race-picks-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: calc(16px + var(--app-safe-top, 0px)) 16px calc(16px + var(--app-safe-bottom, 0px)); background: #101625b8; }
+.race-picks-sheet { width: min(100%, 520px); max-height: 100%; min-height: 0; display: flex; flex-direction: column; padding: 18px; background: #f5f1e8; color: #292d24; border-radius: 14px; box-shadow: 0 20px 60px #0004; }
+.race-picks-sheet > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.race-picks-sheet h3 { font-size: 19px; }
+.race-picks-sheet p { font-size: 11px; color: #74796a; }
+.race-picks-sheet .icon-button { color: #434d3a; border-color: #292d2429; flex-shrink: 0; }
+.race-picks-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.race-picks-list > article { border-top: 1px solid #292d2420; padding: 8px 0; }
+.race-picks-list > article > div:first-child { display: flex; align-items: center; gap: 10px; }
+.race-picks-list .horse-portrait { width: 40px; height: 34px; }
+.race-picks-list .horse-supporters { padding: 4px 0; }
+@media (max-width: 720px), (max-width: 1024px) and (max-height: 600px) {
+  .race-screen {
+    --race-runner-width: 30px;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+    padding: calc(8px + var(--app-safe-top, 0px)) calc(8px + var(--app-safe-right, 0px)) calc(8px + var(--app-safe-bottom, 0px)) calc(8px + var(--app-safe-left, 0px));
+    overscroll-behavior: none;
+  }
+  .race-canvas { gap: 5px; }
+  .race-screen::before,
+  .race-screen::after { content: ""; position: absolute; left: 0; right: 0; background: #151e32; pointer-events: none; }
+  .race-screen::before { top: 0; height: var(--app-safe-top, 0px); }
+  .race-screen::after { bottom: 0; height: var(--app-safe-bottom, 0px); }
+  .race-screen .horse-lane { grid-template-columns: 92px minmax(0, 1fr) 20px; gap: 5px; padding: 3px 4px; }
+  .race-screen .horse-lane-heading > strong { font-size: 12px; }
+  .race-topbar strong { font-size: 16px; }
+  .race-screen .race-leaders { font-size: 10px; gap: 6px; }
+  .race-watch-footer strong { font-size: 12px; }
+  .race-watch-footer strong > span { display: block; font-size: 11px; }
+  .race-picks-toggle { font-size: 11px; padding-inline: 9px; }
+}
+@media (max-width: 1024px) and (max-height: 500px) {
+  .race-screen { --race-runner-width: 24px; padding-top: calc(3px + var(--app-safe-top, 0px)); padding-bottom: calc(3px + var(--app-safe-bottom, 0px)); }
+  .race-canvas { gap: 2px; }
+  .race-topbar > div { display: flex; align-items: center; gap: 12px; }
+  .race-topbar strong { font-size: 14px; }
+  .race-clock { font-size: 20px; display: flex; align-items: baseline; gap: 3px; }
+  .race-screen .horse-lane { grid-template-columns: 128px minmax(0, 1fr) 20px; padding-block: 1px; }
+  .race-screen .horse-lane-heading { flex-direction: row; align-items: center; gap: 5px; }
+  .race-screen .horse-lane-heading > strong { font-size: 11px; }
+  .race-cheerers { height: 14px; font-size: 11px; flex: 1; }
+  .race-cheerers small, .race-screen .race-cheerers em { font-size: 8px; }
+  .race-watch-footer small { display: none; }
+  .race-watch-footer strong > span { display: inline; }
+  .race-saddle-number { font-size: 8px; line-height: 11px; min-width: 11px; bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .race-distance-bar { transition: none; } }

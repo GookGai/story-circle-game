@@ -10,6 +10,8 @@ export default function AvatarPicker({ selected, onSelect }) {
           className={`avatar-option ${selected === avatar.id ? 'selected' : ''}`}
           onClick={() => onSelect(avatar.id)}
           title={avatar.name}
+          aria-label={avatar.name}
+          aria-pressed={selected === avatar.id}
         >
           <div className="avatar-option-emoji">{avatar.emoji}</div>
           <span className="avatar-option-name">{avatar.name}</span>

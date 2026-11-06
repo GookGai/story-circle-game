@@ -1,111 +1,64 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
-import Navbar from './components/Navbar';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Lobby from './pages/Lobby';
-import Room from './pages/Room';
-import HorseRace from './pages/HorseRace';
-import MinorityVote from './pages/MinorityVote';
-import PanicJump from './pages/PanicJump';
-import Stats from './pages/Stats';
-import JoinRoom from './pages/JoinRoom';
-import pkg from '../package.json';
+import { lazy, Suspense } from "react";
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from "react-router-dom";
+import { useAuth } from "./hooks/useAuth";
+import PartyHome from "./pages/PartyHome";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import NativeBridge from "./components/NativeBridge";
 
-function ProtectedRoute({ children }) {
+const PartyRoom = lazy(() => import("./pages/PartyRoom"));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+function RoomRoute() {
   const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
+  const { code } = useParams();
+  if (loading)
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="spinner lg" />
+      <div className="party-loading">
+        <span className="spinner" role="status" aria-label="กำลังโหลด" />
       </div>
     );
-  }
-
-  if (!user) {
-    const pathParts = location.pathname.split('/');
-    const isRoomOrGame = pathParts[1] === 'room' || pathParts[1] === 'game';
-    const code = pathParts[1] === 'room' ? pathParts[2] : pathParts[3];
-
-    if (isRoomOrGame && code) {
-      return <Navigate to={`/join/${code}`} replace />;
-    }
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
+  return user ? <PartyRoom /> : <Navigate to={`/join/${code}`} replace />;
+}
+function LobbyRedirect() {
+  return <Navigate to="/?create=1" replace />;
 }
 
 export default function App() {
-  const location = useLocation();
-  const isLanding = location.pathname === '/';
-
+  const { pathname } = useLocation();
   return (
     <>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/join/:code" element={<JoinRoom />} />
-        <Route
-          path="/lobby"
-          element={
-            <ProtectedRoute>
-              <Lobby />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/room/:code"
-          element={
-            <ProtectedRoute>
-              <Room />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/game/horse/:code"
-          element={
-            <ProtectedRoute>
-              <HorseRace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/game/vote/:code"
-          element={
-            <ProtectedRoute>
-              <MinorityVote />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/game/jump/:code"
-          element={
-            <ProtectedRoute>
-              <PanicJump />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/stats/:roomId?"
-          element={
-            <ProtectedRoute>
-              <Stats />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      {!isLanding && <Navbar />}
-
-      <div style={{ position: 'fixed', bottom: 4, right: 8, fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', pointerEvents: 'none', zIndex: 9999 }}>
-        v{pkg.version}
-      </div>
+      <NativeBridge />
+      <Suspense
+        fallback={
+          <div className="party-loading">
+            <span className="spinner" role="status" aria-label="กำลังโหลดเกม" />
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/" element={<PartyHome key={pathname} />} />
+          <Route path="/join/:code" element={<PartyHome key={pathname} />} />
+          <Route path="/room/:code" element={<RoomRoute />} />
+          <Route path="/game/:game/:code" element={<RoomRoute />} />
+          <Route path="/lobby" element={<LobbyRedirect />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+      {["/login", "/register"].includes(pathname) && (
+        <Link className="account-back" to="/">
+          ← กลับไปตั้งวง
+        </Link>
+      )}
     </>
   );
 }

@@ -116,7 +116,7 @@ if (existsSync(path.join(ultigyFrontendDir, "index.html"))) {
   app.use(ultigyPath + "/assets", express.static(path.join(ultigyFrontendDir, "assets"), {
     maxAge: "1y", immutable: true,
   }));
-  app.use(ultigyPath, express.static(ultigyFrontendDir, { index: false, maxAge: 0 }));
+  app.use(ultigyPath, express.static(ultigyFrontendDir, { index: false, redirect: false, maxAge: 0 }));
   app.get([ultigyPath, ultigyPath + "/*path"], (req, res, next) => {
     if (path.extname(req.path)) return next();
     res.sendFile(path.join(ultigyFrontendDir, "index.html"));
@@ -142,8 +142,9 @@ const io = new Server(httpServer, {
   cors: corsOptions,
 });
 
+const ultigySocketPath = /^\/story-circle\/socket\.io\/?(?=\?|$)/;
 function routeUltigySocket(req) {
-  if (req.url?.startsWith(ultigyPath + "/socket.io/")) req.url = req.url.slice(ultigyPath.length);
+  if (req.url) req.url = req.url.replace(ultigySocketPath, "/socket.io/");
 }
 httpServer.prependListener("request", routeUltigySocket);
 httpServer.prependListener("upgrade", routeUltigySocket);

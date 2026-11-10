@@ -154,13 +154,17 @@ try {
       () => request(`/api/rooms/${code}/join`, users[count], {}),
       /เต็ม/,
     );
-    const stranger = io(base, {
+    const stranger = io(target.origin, {
+      path: socketPath,
       auth: { token: users[count].token },
       transports: ["websocket"],
       forceNew: true,
     });
     sockets.push(stranger);
-    await new Promise((r) => stranger.once("connect", r));
+    await new Promise((resolve, reject) => {
+      stranger.once("connect", resolve);
+      stranger.once("connect_error", reject);
+    });
     const reply = await emit(stranger, "party:command", {
       code,
       type: "END",

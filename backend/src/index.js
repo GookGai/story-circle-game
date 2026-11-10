@@ -37,6 +37,7 @@ import { initializeParty } from "./party/service.js";
 const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+const ultigyPath = "/story-circle";
 if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is required in production");
 }
@@ -53,11 +54,15 @@ const configuredOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
 const corsOptions = {
   // `origin: true` reflects the caller and remains compatible with credentials.
   // A literal "*" plus credentials is rejected by browsers.
-  origin: configuredOrigins.includes("*") ? true : [...configuredOrigins, "https://localhost"],
+  origin: configuredOrigins.includes("*") ? true : [...configuredOrigins, "https://localhost", "https://www.ultigy.com"],
   credentials: true,
 };
 
 app.use(cors(corsOptions));
+app.use((req, _res, next) => {
+  if (req.url.startsWith(ultigyPath + "/api/")) req.url = req.url.slice(ultigyPath.length);
+  next();
+});
 app.use('/api', (req, res, next) => {
   res.on('finish', () => {
     if (res.statusCode < 500) return;
@@ -106,6 +111,18 @@ app.get("/health/ready", async (_req, res) => {
 });
 
 // Serve the Vite build from the same process and origin as API and sockets.
+const ultigyFrontendDir = fileURLToPath(new URL("../../frontend/dist-ultigy/", import.meta.url));
+if (existsSync(path.join(ultigyFrontendDir, "index.html"))) {
+  app.use(ultigyPath + "/assets", express.static(path.join(ultigyFrontendDir, "assets"), {
+    maxAge: "1y", immutable: true,
+  }));
+  app.use(ultigyPath, express.static(ultigyFrontendDir, { index: false, maxAge: 0 }));
+  app.get([ultigyPath, ultigyPath + "/*path"], (req, res, next) => {
+    if (path.extname(req.path)) return next();
+    res.sendFile(path.join(ultigyFrontendDir, "index.html"));
+  });
+}
+
 const frontendDir = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
 if (existsSync(path.join(frontendDir, "index.html"))) {
   app.use('/.well-known', express.static(path.join(frontendDir, '.well-known'), { dotfiles: 'allow', maxAge: 0 }));
@@ -124,6 +141,12 @@ if (existsSync(path.join(frontendDir, "index.html"))) {
 const io = new Server(httpServer, {
   cors: corsOptions,
 });
+
+function routeUltigySocket(req) {
+  if (req.url?.startsWith(ultigyPath + "/socket.io/")) req.url = req.url.slice(ultigyPath.length);
+}
+httpServer.prependListener("request", routeUltigySocket);
+httpServer.prependListener("upgrade", routeUltigySocket);
 
 // Initialize all socket event handlers
 initializeParty(io);

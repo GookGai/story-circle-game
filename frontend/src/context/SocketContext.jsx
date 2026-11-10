@@ -27,6 +27,7 @@ export function SocketProvider({ children }) {
 
     // Create new socket connection
     const newSocket = io(API_URL, {
+      path: API_URL ? "/socket.io" : `${import.meta.env.BASE_URL}socket.io`,
       auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,

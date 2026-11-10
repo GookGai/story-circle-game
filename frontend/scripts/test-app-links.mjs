@@ -12,5 +12,6 @@ test('deep links reject other origins, credentials and non-invitation paths', ()
 });
 test('native QR always uses the public web origin', () => {
   assert.equal(roomInviteUrl('ABC123', PRODUCTION_URL), `${PRODUCTION_URL}/join/ABC123`);
+  assert.equal(roomInviteUrl('ABC123', 'https://www.ultigy.com/story-circle'), 'https://www.ultigy.com/story-circle/join/ABC123');
   assert.throws(() => roomInviteUrl('../login', PRODUCTION_URL));
 });

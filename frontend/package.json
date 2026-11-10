@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:ultigy": "vite build --base=/story-circle/ --outDir dist-ultigy && node scripts/scope-manifest.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test scripts/test-app-links.mjs scripts/test-app-update.mjs scripts/test-race-view.mjs scripts/test-pwa.mjs scripts/test-parachute-view.mjs",

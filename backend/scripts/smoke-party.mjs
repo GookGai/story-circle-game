@@ -7,6 +7,8 @@ const base =
   process.argv.find((v) => v.startsWith("--url="))?.slice(6) ||
   "http://127.0.0.1:3105";
 const production = process.argv.includes("--production");
+const target = new URL(base);
+const socketPath = target.pathname.replace(/\/$/, "") + "/socket.io";
 if (!production && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(base))
   throw new Error(
     "Load tests must use local test server; pass --production for limited smoke checks",
@@ -54,7 +56,8 @@ async function guest(index) {
 }
 async function connect(user, code) {
   const client = { ...user, code, state: null };
-  const socket = io(base, {
+  const socket = io(target.origin, {
+    path: socketPath,
     auth: { token: user.token },
     transports: ["websocket"],
     forceNew: true,

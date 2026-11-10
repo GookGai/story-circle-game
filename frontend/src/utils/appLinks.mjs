@@ -17,5 +17,6 @@ export function invitePath(value, publicOrigin = PRODUCTION_URL) {
 
 export function roomInviteUrl(code, publicOrigin) {
   if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error('Invalid room code');
-  return `${new URL(publicOrigin).origin}/join/${code}`;
+  const url = new URL(publicOrigin);
+  return `${url.origin}${url.pathname.replace(/\/$/, '')}/join/${code}`;
 }

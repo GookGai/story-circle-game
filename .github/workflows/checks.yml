@@ -40,6 +40,7 @@ jobs:
       - run: npm run lint --prefix frontend
       - run: npm test --prefix frontend
       - run: npm run build --prefix frontend
+      - run: npm run build:ultigy --prefix frontend
       - run: npm test --prefix backend
       - run: npm run db:push --prefix backend
       - name: Ten-player integration checks
@@ -50,4 +51,5 @@ jobs:
             if curl --fail --silent http://127.0.0.1:3105/health/ready; then break; fi
             sleep 1
           done
-          node backend/scripts/smoke-party.mjs
+          curl --fail --silent http://127.0.0.1:3105/story-circle/ | grep -F '/story-circle/assets/'
+          node backend/scripts/smoke-party.mjs --url=http://127.0.0.1:3105/story-circle

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Story Circle</string>
+    <string name="title_activity_main">Story Circle</string>
+    <string name="package_name">com.storycircle.game</string>
+    <string name="custom_url_scheme">com.storycircle.game</string>
+</resources>
